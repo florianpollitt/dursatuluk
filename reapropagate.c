@@ -21,7 +21,7 @@ struct watch *ring_reapropagate (struct ring *ring, bool stop_at_conflict,
   while (!reap_empty (reap)) {
     if (stop_at_conflict && conflict)
       break;
-    unsigned pos = (unsigned) reap_pop (reap);
+    unsigned pos = (unsigned) reap_pop (reap);  // is this cast always correct?
     int lit = trail->begin[pos];
     LOG ("propagating %s", LOGLIT (lit));
     propagations++;

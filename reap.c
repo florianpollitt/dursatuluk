@@ -62,7 +62,7 @@ uint64_t reap_pop (struct reap *reap) {
     }
     uint64_t res;
     if (i) {
-      res = - 1;
+      res = - 1; // better use uint64_t max
       const uint64_t *begin = s.begin;
       const uint64_t *end = s.end;
       uint64_t *q = s.begin;
