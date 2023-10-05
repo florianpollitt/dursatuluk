@@ -2,6 +2,7 @@
 #define _stack_h_INCLUDED
 
 #include "allocate.h"
+#include <stdint.h>
 
 #define SIZE(STACK) ((size_t) ((STACK).end - (STACK).begin))
 
@@ -76,6 +77,10 @@
 
 struct unsigneds {
   unsigned *begin, *end, *allocated;
+};
+
+struct uint64_ts {
+  uint64_t *begin, *end, *allocated;
 };
 
 struct buffer {

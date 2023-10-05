@@ -92,6 +92,8 @@ void init_ring (struct ring *ring) {
   trail->propagate = trail->begin;
   trail->pos = allocate_array (size, sizeof *trail->pos);
 
+  reap_init (&ring->reap);
+
   struct ring_units *units = &ring->ring_units;
   assert (!units->begin);
   units->end = units->begin = allocate_array (size, sizeof *units->begin);
@@ -125,6 +127,7 @@ void release_ring (struct ring *ring, bool keep_values) {
   RELEASE (ring->minimize);
   RELEASE (ring->sorter);
   RELEASE (ring->outoforder);
+  reap_release (&ring->reap);
 
   FREE (ring->references);
 

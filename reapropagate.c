@@ -1,4 +1,3 @@
-#include "propagate.h"
 #include "reapropagate.h"
 #include "assign.h"
 #include "macros.h"
@@ -6,23 +5,24 @@
 #include "ruler.h"
 #include "utilities.h"
 
-struct watch *ring_propagate (struct ring *ring, bool stop_at_conflict,
-                              struct clause *ignore) {
-  if (ring->options.reapropagate)
-    return ring_reapropagate (ring, stop_at_conflict, ignore);
+struct watch *ring_reapropagate (struct ring *ring, bool stop_at_conflict,
+                                struct clause *ignore) {
+  assert (ring->options.reapropagate);
   assert (!ring->inconsistent);
   assert (!ignore || !is_binary_pointer (ignore));
   struct ring_trail *trail = &ring->trail;
+  struct reap *reap = &ring->reap;
   struct watch *conflict = 0;
 #ifdef METRICS
   uint64_t *visits = ring->statistics.contexts[ring->context].visits;
 #endif
   signed char *values = ring->values;
   uint64_t ticks = 0, propagations = 0;
-  while (trail->propagate != trail->end) {
+  while (!reap_empty (reap)) {
     if (stop_at_conflict && conflict)
       break;
-    unsigned lit = *trail->propagate++;
+    unsigned pos = (unsigned) reap_pop (reap);
+    int lit = trail->begin[pos];
     LOG ("propagating %s", LOGLIT (lit));
     propagations++;
     unsigned not_lit = NOT (lit);
@@ -300,5 +300,7 @@ struct watch *ring_propagate (struct ring *ring, bool stop_at_conflict,
   context->propagations += propagations;
   context->ticks += ticks;
 
+  LOG ("clear reap after propagation");
+  reap_clear (reap);
   return conflict;
 }

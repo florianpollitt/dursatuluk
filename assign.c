@@ -89,6 +89,16 @@ static void assign (struct ring *ring, unsigned lit, struct watch *reason,
   assert (trail->end < trail->begin + ring->size);
   *trail->end++ = lit;
 
+  if (ring->options.reapropagate) {
+    uint64_t res = assignment_level;
+    assert (pos < UINT_MAX);
+    res <<= 32;
+    res |= pos;
+    LOG ("push %s on reap with level %d and pos %ld = key %"
+         PRId64, LOGLIT (lit), assignment_level, pos, res);
+    reap_push (&ring->reap, res);
+  }
+  
 #ifdef LOGGING
   if (assignment_level < level) {
     if (reason)

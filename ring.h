@@ -8,6 +8,7 @@
 #include "macros.h"
 #include "options.h"
 #include "profile.h"
+#include "reap.h"
 #include "queue.h"
 #include "stack.h"
 #include "statistics.h"
@@ -135,6 +136,7 @@ struct ring {
   struct heap heap;
   struct phases *phases;
   struct queue queue;
+  struct reap reap;
 
   unsigned tier2;
   unsigned redundant;
