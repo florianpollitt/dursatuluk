@@ -55,17 +55,17 @@ uint64_t reap_pop (struct reap *reap) {
   for (;;) {
     assert (i < 65);
     assert (i <= reap->max_bucket);
-    struct uint64_ts s = reap->buckets[i];
-    if (EMPTY (s)) {
+    struct uint64_ts *s = &reap->buckets[i];
+    if (EMPTY (*s)) {
       reap->min_bucket = ++i;
       continue;
     }
     uint64_t res;
     if (i) {   // (A)
       res = - 1; // better use uint64_t max
-      const uint64_t *begin = s.begin;
-      const uint64_t *end = s.end;
-      uint64_t *q = s.begin;
+      const uint64_t *begin = s->begin;
+      const uint64_t *end = s->end;
+      uint64_t *q = s->begin;
       assert (begin < end);
       for (uint64_t *p = begin; p != end; ++p) {
         const uint64_t tmp = *p;
@@ -88,21 +88,20 @@ uint64_t reap_pop (struct reap *reap) {
           reap->min_bucket = j;
       }
 
-      CLEAR (s);
+      CLEAR (*s);
 
       if (i && reap->max_bucket == i) {
 #ifndef NDEBUG
         for (unsigned j = i + 1; j < 65; j++)
           assert (EMPTY (reap->buckets[j]));
 #endif
-        assert (EMPTY (s)); // always true?
-        if (EMPTY (s))
+        assert (EMPTY (*s)); // always true?
+        if (EMPTY (*s))
           reap->max_bucket = i - 1;
       }
     } else {    // (B)
-      // can only happen if 0 is pushed
+      // can only happen if same element is pushed multiple times
       res = reap->last_deleted;
-      assert (!res);
       assert (!EMPTY (reap->buckets[0]));
       assert (PEEK (reap->buckets[0], 0) == res);
       POP (reap->buckets[0]);
@@ -114,8 +113,8 @@ uint64_t reap_pop (struct reap *reap) {
         assert (EMPTY (reap->buckets[j]));
 #endif
       // always empty except (B) triggers
-      assert (EMPTY (s));
-      if (EMPTY (s))
+      assert (EMPTY (*s) || res == reap->last_deleted);
+      if (EMPTY (*s))
         reap->min_bucket = (int) i + 1 < 64 ? (int) i + 1 : 64;
     }
 

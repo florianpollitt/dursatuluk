@@ -83,6 +83,7 @@ static void force_to_repropagate (struct ring *ring, unsigned lit) {
   assert (propagate < ring->trail.end);
   assert (*propagate == NOT (lit));
   assert (propagate < ring->trail.propagate);
+  // TODO: init reap correctly
   ring->trail.propagate = propagate;
   LOG ("setting end of trail to %zu", pos);
   if (!ring->level)

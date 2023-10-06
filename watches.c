@@ -60,6 +60,7 @@ void reconnect_watches (struct ring *ring, struct watches *saved) {
     push_watch (ring, other, other_watch);
   }
   very_verbose (ring, "reconnected %zu clauses", reconnected);
+  // TODO: init reap correctly
   ring->trail.propagate = ring->trail.begin;
 }
 
