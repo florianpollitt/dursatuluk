@@ -83,7 +83,8 @@ static void force_to_repropagate (struct ring *ring, unsigned lit) {
   assert (propagate < ring->trail.end);
   assert (*propagate == NOT (lit));
   assert (propagate < ring->trail.propagate);
-  // TODO: init reap correctly
+  // TODO: init reap correctly -> propably just add lit to queue
+  // should work with reimply but not for now
   ring->trail.propagate = propagate;
   LOG ("setting end of trail to %zu", pos);
   if (!ring->level)
