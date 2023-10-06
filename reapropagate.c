@@ -22,7 +22,12 @@ struct watch *ring_reapropagate (struct ring *ring, bool stop_at_conflict,
     if (stop_at_conflict && conflict)
       break;
     unsigned pos = (unsigned) reap_pop (reap);  // is this cast always correct?
-    int lit = trail->begin[pos];
+    unsigned lit = trail->begin[pos];
+
+#ifndef NDEBUG
+    unsigned other = *trail->propagate++;
+    assert (other == lit);
+#endif
     LOG ("propagating %s", LOGLIT (lit));
     propagations++;
     unsigned not_lit = NOT (lit);

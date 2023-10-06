@@ -61,7 +61,7 @@ uint64_t reap_pop (struct reap *reap) {
       continue;
     }
     uint64_t res;
-    if (i) {
+    if (i) {   // (A)
       res = - 1; // better use uint64_t max
       const uint64_t *begin = s.begin;
       const uint64_t *end = s.end;
@@ -99,8 +99,10 @@ uint64_t reap_pop (struct reap *reap) {
         if (EMPTY (s))
           reap->max_bucket = i - 1;
       }
-    } else {
+    } else {    // (B)
+      // can only happen if 0 is pushed
       res = reap->last_deleted;
+      assert (!res);
       assert (!EMPTY (reap->buckets[0]));
       assert (PEEK (reap->buckets[0], 0) == res);
       POP (reap->buckets[0]);
@@ -111,6 +113,8 @@ uint64_t reap_pop (struct reap *reap) {
       for (unsigned j = 0; j < i; j++)
         assert (EMPTY (reap->buckets[j]));
 #endif
+      // always empty except (B) triggers
+      assert (EMPTY (s));
       if (EMPTY (s))
         reap->min_bucket = (int) i + 1 < 64 ? (int) i + 1 : 64;
     }
