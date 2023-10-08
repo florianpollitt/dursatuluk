@@ -835,6 +835,8 @@ int simplify_ring (struct ring *ring) {
   LOG ("reset propagate because of symplify");
   // TODO: init reap correctly
   ring->trail.propagate = ring->trail.begin;
+  if (ring->options.reapropagate)
+    init_reapropagate (ring, ring->trail.begin);
   if (!unclone_before_running_simplification (ring))
     return ring->status;
   ring->statistics.simplifications++;

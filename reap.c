@@ -8,8 +8,9 @@ void reap_init (struct reap *reap) {
   reap->last_deleted = 0;
   reap->min_bucket = 64;
   reap->max_bucket = 0;
-  for (unsigned i = 0; i < 65; i++)
-    INIT (reap->buckets[i]); // unnecessary?
+  
+  //for (unsigned i = 0; i < 65; i++)
+    //INIT (reap->buckets[i]); // unnecessary?
 }
 
 void reap_release (struct reap *reap) {
@@ -74,6 +75,7 @@ uint64_t reap_pop (struct reap *reap) {
         res = tmp;
         q = p;
       }
+      assert (reap->last_deleted <= res);
 
       for (uint64_t *p = begin; p != end; ++p) {
         if (p == q)

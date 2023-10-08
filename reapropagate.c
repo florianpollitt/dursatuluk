@@ -5,6 +5,28 @@
 #include "ruler.h"
 #include "utilities.h"
 
+
+void init_reapropagate (struct ring *ring, unsigned *propagate) {
+  struct ring_trail *trail = &ring->trail;
+  struct reap *reap = &ring->reap;
+  assert (reap_empty (reap));
+  const unsigned *end = trail->end;
+  for (unsigned *p = propagate; p != end; ++p) {
+    int lit = *p;
+    unsigned idx = IDX (lit);
+    struct variable *v = ring->variables + idx;
+    const size_t pos = trail->pos[idx];
+    const unsigned level = v->level;
+    uint64_t res = level;
+    assert (pos < UINT_MAX);
+    res <<= 32;
+    res |= pos;
+    LOG ("push %s on reap with level %d and pos %ld = key %"
+         PRId64, LOGLIT (lit), level, pos, res);
+    reap_push (reap, res);
+  }
+}
+
 struct watch *ring_reapropagate (struct ring *ring, bool stop_at_conflict,
                                 struct clause *ignore) {
   assert (ring->options.reapropagate);

@@ -5,6 +5,7 @@
 #include "message.h"
 #include "propagate.h"
 #include "random.h"
+#include "reapropagate.h"
 #include "ruler.h"
 #include "trace.h"
 #include "utilities.h"
@@ -86,6 +87,8 @@ static void force_to_repropagate (struct ring *ring, unsigned lit) {
   // TODO: init reap correctly -> propably just add lit to queue
   // should work with reimply but not for now
   ring->trail.propagate = propagate;
+  if (ring->options.reapropagate)
+    init_reapropagate (ring, propagate);
   LOG ("setting end of trail to %zu", pos);
   if (!ring->level)
     ring->iterating = -1;
