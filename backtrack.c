@@ -1,6 +1,7 @@
 #include "backtrack.h"
 #include "message.h"
 #include "ring.h"
+#include "reapropagate.h"
 
 static void unassign (struct ring *ring, unsigned lit) {
 #ifdef LOGGING
@@ -56,6 +57,7 @@ void backtrack (struct ring *ring, unsigned new_level) {
     trail->pos[idx] = pos++;
   }
   assert (pos == SIZE (*trail));
+  init_reapropagate (ring, t);
 }
 
 void update_best_and_target_phases (struct ring *ring) {

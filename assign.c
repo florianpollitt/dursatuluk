@@ -90,7 +90,9 @@ static void assign (struct ring *ring, unsigned lit, struct watch *reason,
   *trail->end++ = lit;
 
   if (ring->options.reapropagate) {
-    uint64_t res = assignment_level;
+    // TODO: switch comments
+    uint64_t res = ring->level;
+    // uint64_t res = assignment_level;
     assert (pos < UINT_MAX);
     res <<= 32;
     res |= pos;

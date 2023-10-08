@@ -288,7 +288,7 @@ bool analyze (struct ring *ring, struct watch *reason) {
     if (!ring->options.chronological ||
         back < ring->options.backjump_limit ||
         back - ring->options.backjump_limit <= jump)
-      backtrack (ring, jump);
+      backtrack (ring, jump); // this breaks invariant for init_reapropagate
     else {
       LOG ("chronological backtracking only (staying at %u not %u)", back,
            jump);

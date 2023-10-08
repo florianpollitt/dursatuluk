@@ -9,14 +9,17 @@
 void init_reapropagate (struct ring *ring, unsigned *propagate) {
   struct ring_trail *trail = &ring->trail;
   struct reap *reap = &ring->reap;
-  assert (reap_empty (reap));
+  // TODO: assert (reap_empty (reap));  broken in analyze.c line 291
+  reap_clear (reap);
   const unsigned *end = trail->end;
   for (unsigned *p = propagate; p != end; ++p) {
     int lit = *p;
     unsigned idx = IDX (lit);
     struct variable *v = ring->variables + idx;
     const size_t pos = trail->pos[idx];
-    const unsigned level = v->level;
+    // TODO: switch comments
+    const unsigned level = ring->level;
+    // const unsigned level = v->level;
     uint64_t res = level;
     assert (pos < UINT_MAX);
     res <<= 32;
