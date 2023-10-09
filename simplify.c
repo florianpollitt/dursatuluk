@@ -8,6 +8,7 @@
 #include "import.h"
 #include "message.h"
 #include "propagate.h"
+#include "reapropagate.h"
 #include "report.h"
 #include "scale.h"
 #include "search.h"

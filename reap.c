@@ -34,7 +34,11 @@ void reap_clear (struct reap *reap) {
 }
 
 static inline unsigned leading_zeroes_of_uint64_t (uint64_t x) {
-  return x ? __builtin_clz (x) : sizeof (uint64_t) * 8;
+  const unsigned front = (unsigned) (x >> 32);
+  if (front) return __builtin_clz (front);
+  const unsigned back = (unsigned) x;
+  if (back) return __builtin_clz (back) + sizeof (unsigned) * 8;
+  return sizeof (uint64_t) * 8;
 }
 
 void reap_push (struct reap *reap, uint64_t e) {
@@ -64,7 +68,7 @@ uint64_t reap_pop (struct reap *reap) {
     uint64_t res;
     if (i) {   // (A)
       res = - 1; // better use uint64_t max
-      const uint64_t *begin = s->begin;
+      uint64_t *begin = s->begin;
       const uint64_t *end = s->end;
       uint64_t *q = s->begin;
       assert (begin < end);

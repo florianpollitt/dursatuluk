@@ -57,7 +57,8 @@ void backtrack (struct ring *ring, unsigned new_level) {
     trail->pos[idx] = pos++;
   }
   assert (pos == SIZE (*trail));
-  init_reapropagate (ring, t);
+  if (ring->options.reapropagate)
+    init_reapropagate (ring, t);
 }
 
 void update_best_and_target_phases (struct ring *ring) {

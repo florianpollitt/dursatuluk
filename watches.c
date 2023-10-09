@@ -1,6 +1,7 @@
 #include "watches.h"
 #include "clause.h"
 #include "message.h"
+#include "reapropagate.h"
 #include "ring.h"
 #include "tagging.h"
 #include "trace.h"
