@@ -108,10 +108,9 @@ uint64_t reap_pop (struct reap *reap) {
       }
     } else {    // (B)
       // can only happen if same element is pushed multiple times
-      res = reap->last_deleted;
       assert (!EMPTY (reap->buckets[0]));
-      assert (PEEK (reap->buckets[0], 0) == res);
-      POP (reap->buckets[0]);
+      assert (PEEK (reap->buckets[0], 0) == reap->last_deleted);
+      res = POP (reap->buckets[0]);
     }
 
     if (reap->min_bucket == i) {

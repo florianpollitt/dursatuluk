@@ -20,6 +20,7 @@ void init_reapropagate (struct ring *ring, unsigned *propagate) {
     // TODO: switch comments
     const unsigned level = ring->level;
     // const unsigned level = v->level;
+    (void) v;
     uint64_t res = level;
     assert (pos < UINT_MAX);
     res <<= 32;
@@ -49,10 +50,10 @@ struct watch *ring_reapropagate (struct ring *ring, bool stop_at_conflict,
     unsigned pos = (unsigned) reap_pop (reap);  // is this cast always correct?
     unsigned lit = trail->begin[pos];
 
-#ifndef NDEBUG
-    unsigned other = *trail->propagate++;
-    assert (other == lit);
-#endif
+    assert (*trail->propagate == lit);
+    // needed for phases...?
+    trail->propagate++;
+
     LOG ("propagating %s", LOGLIT (lit));
     propagations++;
     unsigned not_lit = NOT (lit);
