@@ -2,6 +2,7 @@
 #include <assert.h>
 #include <limits.h>
 #include <string.h>
+#include <stdint.h>
 
 void reap_init (struct reap *reap) {
   reap->num_elements = 0;
@@ -67,7 +68,7 @@ uint64_t reap_pop (struct reap *reap) {
     }
     uint64_t res;
     if (i) {   // (A)
-      res = - 1; // better use uint64_t max
+      res = UINT64_MAX; // needs stdint header
       uint64_t *begin = s->begin;
       const uint64_t *end = s->end;
       uint64_t *q = s->begin;
