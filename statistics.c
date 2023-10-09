@@ -31,22 +31,22 @@ void print_ring_statistics (struct ring *ring) {
            percent (chronological, conflicts));
   PRINTLN ("%-22s %17" PRIu64 " %13.2f per conflict",
            "decisions:", decisions, average (decisions, conflicts));
-  PRINTLN ("  %-22s %17" PRIu64 " %13.2f %% decisions",
+  PRINTLN ("  %-20s %17" PRIu64 " %13.2f %% decisions",
            "heap-decisions:", s->decisions.heap,
            percent (s->decisions.heap, decisions));
-  PRINTLN ("  %-22s %17" PRIu64 " %13.2f %% decisions",
+  PRINTLN ("  %-20s %17" PRIu64 " %13.2f %% decisions",
            "negative-decisions:", s->decisions.negative,
            percent (s->decisions.negative, decisions));
-  PRINTLN ("  %-22s %17" PRIu64 " %13.2f %% decisions",
+  PRINTLN ("  %-20s %17" PRIu64 " %13.2f %% decisions",
            "positive-decisions:", s->decisions.positive,
            percent (s->decisions.positive, decisions));
-  PRINTLN ("  %-22s %17" PRIu64 " %13.2f %% decisions",
+  PRINTLN ("  %-20s %17" PRIu64 " %13.2f %% decisions",
            "queue-decisions:", s->decisions.queue,
            percent (s->decisions.queue, decisions));
-  PRINTLN ("  %-22s %17" PRIu64 " %13.2f %% decisions",
+  PRINTLN ("  %-20s %17" PRIu64 " %13.2f %% decisions",
            "random-decisions:", s->decisions.random,
            percent (s->decisions.random, decisions));
-  PRINTLN ("  %-22s %17" PRIu64 " %13.2f decisions",
+  PRINTLN ("  %-20s %17" PRIu64 " %13.2f decisions",
            "random-sequences:", s->random_sequences,
            average (s->decisions.random, s->random_sequences));
   PRINTLN ("%-22s %17u %13.2f %% variables", "solving-fixed:", s->fixed,
