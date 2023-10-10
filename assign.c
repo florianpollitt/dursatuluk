@@ -89,7 +89,7 @@ static void assign (struct ring *ring, unsigned lit, struct watch *reason,
   assert (trail->end < trail->begin + ring->size);
   *trail->end++ = lit;
 
-  if (ring->options.reapropagate) {
+  if (ring->options.reimply) {
     // TODO: switch comments
     uint64_t res = ring->level;
     // uint64_t res = assignment_level;

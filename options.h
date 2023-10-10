@@ -85,7 +85,7 @@
   OPTION (unsigned, random_decision_length, 1, 1, INF, "random conflicts length") \
   OPTION (bool, random_stable_decisions, 0, 0, 1, "random focused decisions") \
   OPTION (bool, random_order, 0, 0, 1, "initial random decision order") \
-  OPTION (bool, reapropagate, 1, 0, 1, "use reap for propagation") \
+  OPTION (bool, reimply, 1, 0, 1, "use reap for propagation") \
   OPTION (unsigned, reduce_interval, 1e3, 1, 1e5, "reduce base conflict interval") \
   OPTION (bool, rephase, 1, 0, 1, "reset saved phases regularly") \
   OPTION (unsigned, rephase_interval, 1e3, 1, INF, "base rephase conflict interval") \

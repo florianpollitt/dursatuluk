@@ -1,4 +1,4 @@
-#include "analyze.h"
+#include "reapalyze.h"
 
 #include <string.h>
 
@@ -8,13 +8,12 @@
 #include "export.h"
 #include "macros.h"
 #include "minimize.h"
-#include "reapalyze.h"
 #include "ring.h"
 #include "sort.h"
 #include "trace.h"
 #include "utilities.h"
 
-static void bump_reason (struct ring *ring, struct watcher *watcher) {
+static void reap_bump_reason (struct ring *ring, struct watcher *watcher) {
   if (!watcher->redundant)
     return;
   if (watcher->glue <= TIER1_GLUE_LIMIT)
@@ -25,7 +24,7 @@ static void bump_reason (struct ring *ring, struct watcher *watcher) {
     watcher->used = 1;
 }
 
-static bool analyze_reason_side_literal (struct ring *ring, unsigned lit) {
+static bool reapalyze_reason_side_literal (struct ring *ring, unsigned lit) {
   unsigned idx = IDX (lit);
   struct variable *v = ring->variables + idx;
   if (!v->level)
@@ -37,7 +36,7 @@ static bool analyze_reason_side_literal (struct ring *ring, unsigned lit) {
   return true;
 }
 
-static void analyze_reason_side_literals (struct ring *ring) {
+static void reapalyze_reason_side_literals (struct ring *ring) {
   if (!ring->options.bump_reasons)
     return;
 
@@ -64,7 +63,7 @@ static void analyze_reason_side_literals (struct ring *ring) {
     assert (v->seen || v->shrinkable);
     if (is_binary_pointer (reason)) {
       assert (NOT (lit) == lit_pointer (reason));
-      if (analyze_reason_side_literal (ring, other_pointer (reason)) &&
+      if (reapalyze_reason_side_literal (ring, other_pointer (reason)) &&
           SIZE (ring->analyzed) > limit)
         break;
     } else {
@@ -72,7 +71,7 @@ static void analyze_reason_side_literals (struct ring *ring) {
       struct watcher *watcher = get_watcher (ring, reason);
       ticks++;
       for (all_watcher_literals (other, watcher))
-        if (other != not_lit && analyze_reason_side_literal (ring, other) &&
+        if (other != not_lit && reapalyze_reason_side_literal (ring, other) &&
             SIZE (ring->analyzed) > limit)
           break;
     }
@@ -92,22 +91,22 @@ static void analyze_reason_side_literals (struct ring *ring) {
   *count = *current;
 }
 
-static bool larger_trail_position (unsigned *pos, unsigned a, unsigned b) {
+static bool reap_larger_trail_position (unsigned *pos, unsigned a, unsigned b) {
   unsigned i = IDX (a);
   unsigned j = IDX (b);
   return pos[i] > pos[j];
 }
 
-#define LARGER_TRAIL_POS(A, B) larger_trail_position (pos, (A), (B))
+#define REAP_LARGER_TRAIL_POS(A, B) reap_larger_trail_position (pos, (A), (B))
 
-static void sort_deduced_clause (struct ring *ring) {
+static void reap_sort_deduced_clause (struct ring *ring) {
   LOGTMP ("clause before sorting");
   unsigned *pos = ring->trail.pos;
-  SORT_STACK (unsigned, ring->clause, LARGER_TRAIL_POS);
+  SORT_STACK (unsigned, ring->clause, REAP_LARGER_TRAIL_POS);
   LOGTMP ("clause after sorting");
 }
 
-void clear_analyzed (struct ring *ring) {
+static void reap_clear_analyzed (struct ring *ring) {
   struct unsigneds *analyzed = &ring->analyzed;
   struct variable *variables = ring->variables;
   for (all_elements_on_stack (unsigned, idx, *analyzed)) {
@@ -124,7 +123,7 @@ void clear_analyzed (struct ring *ring) {
   CLEAR (*levels);
 }
 
-static void update_decision_rate (struct ring *ring) {
+static void reap_update_decision_rate (struct ring *ring) {
   uint64_t current = SEARCH_DECISIONS;
   uint64_t previous = ring->last.decisions;
   assert (current >= previous);
@@ -134,7 +133,7 @@ static void update_decision_rate (struct ring *ring) {
   ring->last.decisions = current;
 }
 
-#define RESOLVE_LITERAL(OTHER) \
+#define REAP_RESOLVE_LITERAL(OTHER) \
   do { \
     if (OTHER == uip) \
       break; \
@@ -150,6 +149,9 @@ static void update_decision_rate (struct ring *ring) {
     V->seen = true; \
     PUSH (*analyzed, OTHER_IDX); \
     if (OTHER_LEVEL == conflict_level) { \
+      uint64_t pos = trail->pos[OTHER_IDX]; \
+      pos = -pos - 1; \
+      reap_push (reap, -trail->pos[OTHER_IDX]-1); \
       open++; \
       break; \
     } \
@@ -163,7 +165,7 @@ static void update_decision_rate (struct ring *ring) {
     } \
   } while (0)
 
-#define CONFLICT_LITERAL(LIT_ARG) \
+#define REAP_CONFLICT_LITERAL(LIT_ARG) \
   do { \
     unsigned LIT = (LIT_ARG); \
     unsigned LIT_IDX = IDX (LIT); \
@@ -177,8 +179,7 @@ static void update_decision_rate (struct ring *ring) {
       literals_on_conflict_level++; \
   } while (0)
 
-bool analyze (struct ring *ring, struct watch *reason) {
-  if (ring->options.reimply) return reapalyze (ring, reason);
+bool reapalyze (struct ring *ring, struct watch *reason) {
   assert (!ring->inconsistent);
   if (!ring->level) {
     set_inconsistent (ring, "conflict on root-level produces empty clause");
@@ -191,12 +192,12 @@ bool analyze (struct ring *ring, struct watch *reason) {
   if (is_binary_pointer (reason)) {
     unsigned lit = lit_pointer (reason);
     unsigned other = other_pointer (reason);
-    CONFLICT_LITERAL (lit);
-    CONFLICT_LITERAL (other);
+    REAP_CONFLICT_LITERAL (lit);
+    REAP_CONFLICT_LITERAL (other);
   } else {
     struct watcher *watcher = get_watcher (ring, reason);
     for (all_watcher_literals (lit, watcher))
-      CONFLICT_LITERAL (lit);
+      REAP_CONFLICT_LITERAL (lit);
   }
   assert (conflict_level <= ring->level);
   if (conflict_level < ring->level) {
@@ -235,6 +236,8 @@ bool analyze (struct ring *ring, struct watch *reason) {
   unsigned *used = ring->used;
   struct variable *variables = ring->variables;
   struct ring_trail *trail = &ring->trail;
+  struct reap *reap = &ring->analyze_reap;
+  assert (reap_empty (reap));
   unsigned *t = trail->end;
   PUSH (*ring_clause, INVALID);
   const unsigned level = ring->level;
@@ -245,26 +248,36 @@ bool analyze (struct ring *ring, struct watch *reason) {
     if (is_binary_pointer (reason)) {
       unsigned lit = lit_pointer (reason);
       unsigned other = other_pointer (reason);
-      RESOLVE_LITERAL (lit);
-      RESOLVE_LITERAL (other);
+      REAP_RESOLVE_LITERAL (lit);
+      REAP_RESOLVE_LITERAL (other);
     } else {
       struct watcher *watcher = get_watcher (ring, reason);
-      bump_reason (ring, watcher);
+      reap_bump_reason (ring, watcher);
       for (all_watcher_literals (lit, watcher))
-        RESOLVE_LITERAL (lit);
+        REAP_RESOLVE_LITERAL (lit);
     }
+    const unsigned pos = -(reap_pop (reap) + 1);
+    uip = trail->begin[pos];
+#ifndef NDEBUG
     struct variable *v;
+    unsigned debug_lit;
     do {
       assert (t > ring->trail.begin);
-      uip = *--t;
-      unsigned uip_idx = IDX (uip);
+      debug_lit = *--t;
+      unsigned uip_idx = IDX (debug_lit);
       v = ring->variables + uip_idx;
     } while (!v->seen || v->level != conflict_level);
-    if (!--open)
-      break;
+    assert (uip == debug_lit);
+#endif
+    --open;
+    assert ((size_t) open == reap_size (reap));
+    if (reap_empty (reap)) break;
+
     reason = variables[IDX (uip)].reason;
     assert (reason);
   }
+  assert (reap_empty (reap));
+  reap_clear (reap);
   LOG ("back jump level %u", jump);
   struct averages *a = ring->averages + ring->stable;
   update_average (ring, &a->level, "level", SLOW_ALPHA, jump);
@@ -275,13 +288,13 @@ bool analyze (struct ring *ring, struct watch *reason) {
   double filled = percent (assigned, ring->size);
   LOG ("assigned %u variables %.0f%% filled", assigned, filled);
   update_average (ring, &a->trail, "trail", SLOW_ALPHA, filled);
-  update_decision_rate (ring);
+  reap_update_decision_rate (ring);
   unsigned *literals = ring_clause->begin;
   const unsigned not_uip = NOT (uip);
   literals[0] = not_uip;
   LOGTMP ("first UIP %s", LOGLIT (uip));
   shrink_or_minimize_clause (ring, glue);
-  analyze_reason_side_literals (ring);
+  reapalyze_reason_side_literals (ring);
   bump_variables (ring);
   unsigned back = level - 1;
   backtrack (ring, back);
@@ -313,7 +326,7 @@ bool analyze (struct ring *ring, struct watch *reason) {
       export_binary_clause (ring, learned);
     } else {
       if (ring->options.sort_deduced)
-        sort_deduced_clause (ring);
+        reap_sort_deduced_clause (ring);
       else if (VAR (other)->level != jump) {
         unsigned *p = literals + 2, replacement;
         while (assert (p != ring_clause->end),
@@ -335,7 +348,7 @@ bool analyze (struct ring *ring, struct watch *reason) {
     assign_with_reason (ring, not_uip, learned);
   }
   CLEAR (*ring_clause);
-  clear_analyzed (ring);
+  reap_clear_analyzed (ring);
 
   return true;
 }

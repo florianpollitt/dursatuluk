@@ -33,7 +33,7 @@ void init_reapropagate (struct ring *ring, unsigned *propagate) {
 
 struct watch *ring_reapropagate (struct ring *ring, bool stop_at_conflict,
                                 struct clause *ignore) {
-  assert (ring->options.reapropagate);
+  assert (ring->options.reimply);
   assert (!ring->inconsistent);
   assert (!ignore || !is_binary_pointer (ignore));
   struct ring_trail *trail = &ring->trail;

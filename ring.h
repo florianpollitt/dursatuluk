@@ -137,6 +137,7 @@ struct ring {
   struct phases *phases;
   struct queue queue;
   struct reap reap;
+  struct reap analyze_reap;
 
   unsigned tier2;
   unsigned redundant;

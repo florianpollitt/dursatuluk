@@ -93,6 +93,7 @@ void init_ring (struct ring *ring) {
   trail->pos = allocate_array (size, sizeof *trail->pos);
 
   reap_init (&ring->reap);
+  reap_init (&ring->analyze_reap);
 
   struct ring_units *units = &ring->ring_units;
   assert (!units->begin);
@@ -128,6 +129,7 @@ void release_ring (struct ring *ring, bool keep_values) {
   RELEASE (ring->sorter);
   RELEASE (ring->outoforder);
   reap_release (&ring->reap);
+  reap_release (&ring->analyze_reap);
 
   FREE (ring->references);
 
