@@ -166,7 +166,9 @@ struct watch *ring_reapropagate (struct ring *ring, bool stop_at_conflict,
           assert (reason != watch);
           assign_with_reason (ring, blocking, reason);
           ticks++;
-        }
+        }// else {
+          // TODO: possibly reimply
+        // }
       } else {
         // We now have to access the actual watcher data ...
 
