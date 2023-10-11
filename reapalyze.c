@@ -238,7 +238,9 @@ bool reapalyze (struct ring *ring, struct watch *reason) {
   struct ring_trail *trail = &ring->trail;
   struct reap *reap = &ring->analyze_reap;
   assert (reap_empty (reap));
+#ifndef NDEBUG
   unsigned *t = trail->end;
+#endif
   PUSH (*ring_clause, INVALID);
   const unsigned level = ring->level;
   unsigned uip = INVALID, jump = 0, glue = 0, open = 0;

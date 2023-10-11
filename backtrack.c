@@ -34,6 +34,8 @@ void backtrack (struct ring *ring, unsigned new_level) {
   assert (EMPTY (ring->outoforder));
   while (t != trail->begin) {
     unsigned lit = *--t;
+    assert (lit || !ring->options.reimply)
+    if (!lit) continue;
     unsigned idx = IDX (lit);
     struct variable *v = ring->variables + idx;
     unsigned lit_level = v->level;

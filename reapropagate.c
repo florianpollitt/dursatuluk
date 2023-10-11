@@ -38,6 +38,7 @@ struct watch *ring_reapropagate (struct ring *ring, bool stop_at_conflict,
   assert (!ignore || !is_binary_pointer (ignore));
   struct ring_trail *trail = &ring->trail;
   struct reap *reap = &ring->reap;
+  struct variable *variables = ring->variables;
   struct watch *conflict = 0;
 #ifdef METRICS
   uint64_t *visits = ring->statistics.contexts[ring->context].visits;
@@ -47,11 +48,18 @@ struct watch *ring_reapropagate (struct ring *ring, bool stop_at_conflict,
   while (!reap_empty (reap)) {
     if (stop_at_conflict && conflict)
       break;
-    unsigned pos = (unsigned) reap_pop (reap);  // is this cast always correct?
+    uint64_t reap_element = reap_pop (reap);
+    unsigned pos = (unsigned) reap_element;  // is this cast always correct?
     unsigned lit = trail->begin[pos];
-
-    assert (*trail->propagate == lit);
-    // needed for phases...?
+    unsigned lit_level = (unsigned) (reap_element >> 32);
+    struct variable *v = variables + IDX (lit);
+    assert (v->level == lit_level);  // breaks with reimply
+    assert (v->level <= lit_level);  // doesn't break with reimply
+    if (v->level != lit_level) continue;
+    
+    assert (*trail->propagate == lit);  // breaks with reimply
+    // needed for phases...?  need different solution for reimply...
+    // difference between global assignments and unpropagated literals.
     trail->propagate++;
 
     LOG ("propagating %s", LOGLIT (lit));
@@ -81,7 +89,9 @@ struct watch *ring_reapropagate (struct ring *ring, bool stop_at_conflict,
           struct watch *reason = tag_binary (false, other, not_lit);
           assign_with_reason (ring, other, reason);
           ticks++;
-        }
+        } // else {
+          // TODO: possibly reimply
+        // }
       }
 
       ticks += cache_lines (p, binaries);
@@ -125,6 +135,11 @@ struct watch *ring_reapropagate (struct ring *ring, bool stop_at_conflict,
       assert (lit != blocking);
       assert (not_lit != blocking);
       signed char blocking_value = values[blocking];
+      unsigned blocking_idx = IDX (blocking);
+      struct variable *vblock = ring->variables + blocking_idx;
+      // if (vblock->level > lit_level) TODO fix watches and elevate
+
+      
       if (blocking_value > 0)
         continue;
 
