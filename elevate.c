@@ -10,7 +10,7 @@
 #define USE_REASON_MAYBE 2
 #define USE_REASON 3
 
-static void elevate (struct ring *ring, unsigned lit, struct watch *reason,
+static unsigned elevate (struct ring *ring, unsigned lit, struct watch *reason,
                     unsigned assignment_level, int type) {
   unsigned idx = IDX (lit);
 
@@ -21,6 +21,7 @@ static void elevate (struct ring *ring, unsigned lit, struct watch *reason,
 
   struct variable *v = ring->variables + idx;
   const unsigned level = v->level;
+  unsigned replacement = 0;
   assert (level <= ring->level);
   assert (ring->level > 0);
   if (type == UNIT_REASON) {
@@ -33,11 +34,12 @@ static void elevate (struct ring *ring, unsigned lit, struct watch *reason,
   } else if (is_binary_pointer (reason)) {
     unsigned other = other_pointer (reason);
     unsigned other_idx = IDX (other);
+    replacement = other;
     struct variable *u = ring->variables + other_idx;
     assignment_level = u->level;
     if (type == USE_REASON_MAYBE && assignment_level >= level) {
       LOGWATCH (reason, "not elevating %s reason", LOGLIT (lit));
-      return;
+      return 0;
     }
     if (assignment_level && is_binary_pointer (u->reason)) {
       bool redundant =
@@ -53,8 +55,10 @@ static void elevate (struct ring *ring, unsigned lit, struct watch *reason,
       unsigned other_idx = IDX (other);
       struct variable *u = ring->variables + other_idx;
       unsigned other_level = u->level;
-      if (other_level > assignment_level)
+      if (other_level > assignment_level) {
         assignment_level = other_level;
+        replacement = other;
+      }
     }
   }
 
@@ -62,7 +66,7 @@ static void elevate (struct ring *ring, unsigned lit, struct watch *reason,
   if (type == USE_REASON_MAYBE && assignment_level >= level) {
     assert (reason);
     LOGWATCH (reason, "not elevating %s reason", LOGLIT (lit));
-    return;
+    return 0;
   }
   assert (assignment_level < level);
   v->level = assignment_level;
@@ -94,15 +98,12 @@ static void elevate (struct ring *ring, unsigned lit, struct watch *reason,
   *trail->end++ = lit;
 
   assert (ring->options.reimply);
-  // TODO: switch comments
-  uint64_t res = ring->level;
-  // uint64_t res = assignment_level;
+  uint64_t res = assignment_level;
   assert (pos < UINT_MAX);
   res <<= 32;
   res |= pos;
   LOG ("push %s on reap with level %d and pos %ld = key %"
        PRId64, LOGLIT (lit), assignment_level, pos, res);
-  // TODO: incorrect for out of order assignments -> reimply fixes this
   reap_push (&ring->reap, res);
   
 #ifdef LOGGING
@@ -111,31 +112,37 @@ static void elevate (struct ring *ring, unsigned lit, struct watch *reason,
   else
     LOG ("elevating %s", LOGLIT (lit));
 #endif
+  return replacement;
 }
 
 void elevate_with_reason_and_level (struct ring *ring, unsigned lit, unsigned level,
                          struct watch *reason) {
   assert (reason);
-  elevate (ring, lit, reason, level, USE_LEVEL);
-  LOGWATCH (reason, "assign %s with reason", LOGLIT (lit));
+  (void) elevate (ring, lit, reason, level, USE_LEVEL);
+  LOGWATCH (reason, "elevate %s with reason and level", LOGLIT (lit));
 }
 
 void elevate_with_reason (struct ring *ring, unsigned lit,
                          struct watch *reason) {
   assert (reason);
-  elevate (ring, lit, reason, 0, USE_REASON);
-  LOGWATCH (reason, "assign %s with reason", LOGLIT (lit));
+  (void) elevate (ring, lit, reason, 0, USE_REASON);
+  LOGWATCH (reason, "elevate %s with reason", LOGLIT (lit));
 }
 
-void maybe_elevate_with_reason (struct ring *ring, unsigned lit,
+unsigned maybe_elevate_with_reason (struct ring *ring, unsigned lit,
                          struct watch *reason) {
   assert (reason);
-  elevate (ring, lit, reason, 0, USE_REASON_MAYBE);
-  LOGWATCH (reason, "assign %s with reason", LOGLIT (lit));
+  unsigned replacement = elevate (ring, lit, reason, 0, USE_REASON_MAYBE);
+  
+#ifdef LOGGING
+  if (replacement)
+    LOGWATCH (reason, "elevate %s with reason", LOGLIT (lit));
+#endif
+  return replacement;
 }
 
 
 void elevate_ring_unit (struct ring *ring, unsigned unit) {
-  elevate (ring, unit, 0, 0, UNIT_REASON);
-  LOG ("assign %s unit", LOGLIT (unit));
+  (void) elevate (ring, unit, 0, 0, UNIT_REASON);
+  LOG ("elevate %s unit", LOGLIT (unit));
 }

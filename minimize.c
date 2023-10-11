@@ -76,7 +76,7 @@ static size_t shrink_clause (struct ring *ring) {
 
   struct variable *variables = ring->variables;
   struct unsigneds *minimize = &ring->minimize;
-  struct ring_trail *trail = &ring->trail;  // TODO potentiall deal with elevated literals
+  struct ring_trail *trail = &ring->trail;  // TODO potentially deal with elevated literals
 
   struct unsigneds *clause = &ring->clause;
   unsigned *begin = clause->begin;
@@ -116,6 +116,8 @@ static size_t shrink_clause (struct ring *ring) {
 
   while (open) {
     uip = *t--;
+    assert (uip || ring->options.reimply);
+    if (!uip) continue;
     unsigned idx = IDX (uip);
     struct variable *v = variables + idx;
     if (v->level != level)

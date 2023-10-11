@@ -8,6 +8,7 @@
 
 
 void init_reapropagate (struct ring *ring, unsigned *propagate) {
+  // TODO: kill completely with reimply
   struct ring_trail *trail = &ring->trail;
   struct reap *reap = &ring->reap;
   // TODO: assert (reap_empty (reap));  broken in analyze.c line 291
@@ -52,15 +53,9 @@ struct watch *ring_reapropagate (struct ring *ring, bool stop_at_conflict,
     uint64_t reap_element = reap_pop (reap);
     unsigned pos = (unsigned) reap_element;  // is this cast always correct?
     unsigned lit = trail->begin[pos];
-    if (!lit) continue;
-    unsigned lit_level = (unsigned) (reap_element >> 32);
+    if (!lit) continue;  // trail pos gets cleared for elevated literals
     struct variable *v = variables + IDX (lit);
-    assert (v->level == lit_level);  // breaks with reimply
-    assert (v->level <= lit_level);  // doesn't break with reimply
-    if (v->level != lit_level) {
-      assert (!lit);
-      continue;
-    }
+    assert ((unsigned) (reap_element >> 32) == v->level);
     
     assert (*trail->propagate == lit);  // breaks with reimply
     // needed for phases...?  need different solution for reimply...
@@ -95,9 +90,9 @@ struct watch *ring_reapropagate (struct ring *ring, bool stop_at_conflict,
           assign_with_reason (ring, other, reason);
           ticks++;
         } else {
-          // TODO: possibly reimply
+          // maybe elevate
           struct watch *reason = tag_binary (false, other, not_lit);
-          maybe_elevate_with_reason (ring, other, reason);
+          (void) maybe_elevate_with_reason (ring, other, reason);
           ticks++;  // not sure exactly but probably need to increase ticks.
         }
       }
@@ -144,11 +139,9 @@ struct watch *ring_reapropagate (struct ring *ring, bool stop_at_conflict,
       assert (not_lit != blocking);
       signed char blocking_value = values[blocking];
       unsigned blocking_idx = IDX (blocking);
-      struct variable *vblock = ring->variables + blocking_idx;
-      // if (vblock->level > lit_level) TODO fix watches and elevate
-
+      struct variable *vblock = variables + blocking_idx;
       
-      if (blocking_value > 0)
+      if (vblock->level > v->level && blocking_value > 0)
         continue;
 
       if (is_binary_pointer (watch)) {
@@ -175,8 +168,10 @@ struct watch *ring_reapropagate (struct ring *ring, bool stop_at_conflict,
           assign_with_reason (ring, blocking, reason);
           ticks++;
         } else {
-          assert (false);
-          // TODO: possibly reimply
+          // always elevate
+          struct watch *reason = tag_binary (true, blocking, not_lit);
+          elevate_with_reason (ring, blocking, reason);
+          ticks++;  // not sure exactly but probably need to increase ticks.
         }
       } else {
         // We now have to access the actual watcher data ...
@@ -219,7 +214,9 @@ struct watch *ring_reapropagate (struct ring *ring, bool stop_at_conflict,
           other_value = blocking_value;
         else {
           other_value = values[other];
-          if (other_value > 0) {
+          unsigned other_idx = IDX (other);
+          struct variable *u = variables + other_idx;
+          if (other_value > 0 && u->level <= v->level) {
             bool redundant = redundant_pointer (watch);
             watch = tag_index (redundant, idx, other);
             q[-1] = watch;
@@ -245,7 +242,8 @@ struct watch *ring_reapropagate (struct ring *ring, bool stop_at_conflict,
         // initializing the watcher the size field is set to the
         // actual size of the clause if it is short enough and to zero
         // if it is too long (has more than four literals).
-
+                
+        
         unsigned watcher_size = watcher->size;
         if (watcher_size) {
           unsigned *literals = watcher->aux;
@@ -316,11 +314,20 @@ struct watch *ring_reapropagate (struct ring *ring, bool stop_at_conflict,
           watch_literal (ring, replacement, other, watcher);
           ticks++;
           q--;
-        } else if (other_value) {
-          assert (other_value < 0);
+        } else if (other_value < 0) {
           conflict = watch;
           if (stop_at_conflict)
             break;
+        } else if (other_value > 0) {
+          replacement = maybe_elevate_with_reason (ring, other, watch);
+          if (replacement != lit) {
+            watcher->sum = other ^ replacement;
+            LOGCLAUSE (clause, "unwatching %s in", LOGLIT (not_lit));
+            watch_literal (ring, replacement, other, watcher);
+            ticks++;
+            q--;
+          }
+          ticks++;
         } else {
           assign_with_reason (ring, other, watch);
           ticks++;

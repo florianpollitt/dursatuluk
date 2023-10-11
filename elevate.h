@@ -11,7 +11,7 @@ void elevate_with_reason_and_level (struct ring *ring, unsigned lit, unsigned le
 void elevate_with_reason (struct ring *ring, unsigned lit,
                          struct watch *reason);
 
-void maybe_elevate_with_reason (struct ring *ring, unsigned lit,
+unsigned maybe_elevate_with_reason (struct ring *ring, unsigned lit,
                          struct watch *reason);
 
 void elevate_ring_unit (struct ring *ring, unsigned unit);
