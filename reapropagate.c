@@ -1,5 +1,6 @@
 #include "reapropagate.h"
 #include "assign.h"
+#include "elevate.h"
 #include "macros.h"
 #include "message.h"
 #include "ruler.h"
@@ -51,11 +52,15 @@ struct watch *ring_reapropagate (struct ring *ring, bool stop_at_conflict,
     uint64_t reap_element = reap_pop (reap);
     unsigned pos = (unsigned) reap_element;  // is this cast always correct?
     unsigned lit = trail->begin[pos];
+    if (!lit) continue;
     unsigned lit_level = (unsigned) (reap_element >> 32);
     struct variable *v = variables + IDX (lit);
     assert (v->level == lit_level);  // breaks with reimply
     assert (v->level <= lit_level);  // doesn't break with reimply
-    if (v->level != lit_level) continue;
+    if (v->level != lit_level) {
+      assert (!lit);
+      continue;
+    }
     
     assert (*trail->propagate == lit);  // breaks with reimply
     // needed for phases...?  need different solution for reimply...
@@ -89,9 +94,12 @@ struct watch *ring_reapropagate (struct ring *ring, bool stop_at_conflict,
           struct watch *reason = tag_binary (false, other, not_lit);
           assign_with_reason (ring, other, reason);
           ticks++;
-        } // else {
+        } else {
           // TODO: possibly reimply
-        // }
+          struct watch *reason = tag_binary (false, other, not_lit);
+          maybe_elevate_with_reason (ring, other, reason);
+          ticks++;  // not sure exactly but probably need to increase ticks.
+        }
       }
 
       ticks += cache_lines (p, binaries);
@@ -149,7 +157,7 @@ struct watch *ring_reapropagate (struct ring *ring, bool stop_at_conflict,
           conflict = watch;
           if (stop_at_conflict)
             break;
-        } else {
+        } else if (!blocking_value) {
           // Only learned and thus redundant clauses are kept as
           // virtual binary clauses, where virtual means that
           // they only exist in the watch list of this ring.  They
@@ -166,9 +174,10 @@ struct watch *ring_reapropagate (struct ring *ring, bool stop_at_conflict,
           assert (reason != watch);
           assign_with_reason (ring, blocking, reason);
           ticks++;
-        }// else {
+        } else {
+          assert (false);
           // TODO: possibly reimply
-        // }
+        }
       } else {
         // We now have to access the actual watcher data ...
 

@@ -12,12 +12,11 @@
 
 static void elevate (struct ring *ring, unsigned lit, struct watch *reason,
                     unsigned assignment_level, int type) {
-  const unsigned not_lit = NOT (lit);
   unsigned idx = IDX (lit);
 
   assert (idx < ring->size);
   assert (ring->values[lit]);
-  assert (ring->values[not_lit]);
+  assert (ring->values[NOT (lit)]);
   assert (!ring->inactive[idx]);
 
   struct variable *v = ring->variables + idx;

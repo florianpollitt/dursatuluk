@@ -66,7 +66,8 @@ void backtrack (struct ring *ring, unsigned new_level) {
 void update_best_and_target_phases (struct ring *ring) {
   if (!ring->stable)
     return;
-  unsigned assigned = SIZE (ring->trail);
+  unsigned assigned = ring->size - ring->unassigned;
+  assert (ring->options.reimply || assigned == SIZE (ring->trail));
   if (ring->target < assigned) {
     very_verbose (ring,
                   "updating target assigned trail height from %u to %u",

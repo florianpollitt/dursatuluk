@@ -76,7 +76,7 @@ static size_t shrink_clause (struct ring *ring) {
 
   struct variable *variables = ring->variables;
   struct unsigneds *minimize = &ring->minimize;
-  struct ring_trail *trail = &ring->trail;
+  struct ring_trail *trail = &ring->trail;  // TODO potentiall deal with elevated literals
 
   struct unsigneds *clause = &ring->clause;
   unsigned *begin = clause->begin;
