@@ -9,7 +9,7 @@
 
 
 void init_reapropagate (struct ring *ring, unsigned *propagate) {
-  // TODO: kill completely with reimply
+  // TODO: think about usage
   struct ring_trail *trail = &ring->trail;
   struct reap *reap = &ring->reap;
   // TODO: assert (reap_empty (reap));  broken in analyze.c line 291
@@ -70,7 +70,7 @@ struct watch *ring_reapropagate (struct ring *ring, bool stop_at_conflict,
         struct watch *watch = tag_binary (false, other, not_lit);
         signed char other_value = values[other];
         if (other_value < 0) {
-          // TODO: find other level and maybe push on conflicts stack
+          // fake conflicts need to be fixed later
           if ((variables + IDX (other))->level > v->level) {
             if (!reapropagate_later) {
               reapropagate_later = true;

@@ -89,6 +89,7 @@ static size_t shrink_clause (struct ring *ring) {
 
   for (unsigned *p = begin + 1; p != end; p++) {
     unsigned lit = *p;
+    if (lit == INVALID_LIT) continue;  // should deal with elevated literals
     unsigned idx = IDX (lit);
     struct variable *v = variables + idx;
     assert (v->level < ring->level);

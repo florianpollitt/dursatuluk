@@ -313,6 +313,7 @@ bool reapalyze (struct ring *ring, struct watch *reason) {
       ring->statistics.contexts[ring->context].chronological++;
     }
   }
+  // TODO: push reapropagate_later lits on reap.
   unsigned size = SIZE (*ring_clause);
   assert (size);
   if (size == 1) {
