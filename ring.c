@@ -94,6 +94,7 @@ void init_ring (struct ring *ring) {
 
   reap_init (&ring->reap);
   reap_init (&ring->analyze_reap);
+  INIT (ring->reapropagate_later); // why are stacks not initialized to zero?
 
   struct ring_units *units = &ring->ring_units;
   assert (!units->begin);
@@ -128,6 +129,7 @@ void release_ring (struct ring *ring, bool keep_values) {
   RELEASE (ring->minimize);
   RELEASE (ring->sorter);
   RELEASE (ring->outoforder);
+  RELEASE (ring->reapropagate_later);
   reap_release (&ring->reap);
   reap_release (&ring->analyze_reap);
 

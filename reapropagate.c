@@ -3,6 +3,7 @@
 #include "elevate.h"
 #include "macros.h"
 #include "message.h"
+#include "reap.h"
 #include "ruler.h"
 #include "utilities.h"
 
@@ -16,20 +17,7 @@ void init_reapropagate (struct ring *ring, unsigned *propagate) {
   const unsigned *end = trail->end;
   for (unsigned *p = propagate; p != end; ++p) {
     int lit = *p;
-    unsigned idx = IDX (lit);
-    struct variable *v = ring->variables + idx;
-    const size_t pos = trail->pos[idx];
-    // TODO: switch comments
-    const unsigned level = ring->level;
-    // const unsigned level = v->level;
-    (void) v;
-    uint64_t res = level;
-    assert (pos < UINT_MAX);
-    res <<= 32;
-    res |= pos;
-    LOG ("push %s on reap with level %d and pos %ld = key %"
-         PRId64, LOGLIT (lit), level, pos, res);
-    reap_push (reap, res);
+    REAP_PUSH (lit, ring);
   }
 }
 
@@ -56,11 +44,11 @@ struct watch *ring_reapropagate (struct ring *ring, bool stop_at_conflict,
     if (!lit) continue;  // trail pos gets cleared for elevated literals
     struct variable *v = variables + IDX (lit);
     assert ((unsigned) (reap_element >> 32) == v->level);
-    
-    assert (*trail->propagate == lit);  // breaks with reimply
+    bool reapropagate_later = false;
+    // assert (*trail->propagate == lit);  // breaks with reimply
     // needed for phases...?  need different solution for reimply...
     // difference between global assignments and unpropagated literals.
-    trail->propagate++;
+    // trail->propagate++;
 
     LOG ("propagating %s", LOGLIT (lit));
     propagations++;
@@ -82,8 +70,15 @@ struct watch *ring_reapropagate (struct ring *ring, bool stop_at_conflict,
         struct watch *watch = tag_binary (false, other, not_lit);
         signed char other_value = values[other];
         if (other_value < 0) {
-          conflict = watch;
-          if (stop_at_conflict)
+          // TODO: find other level and maybe push on conflicts stack
+          if ((variables + IDX (other))->level > v->level) {
+            if (!reapropagate_later) {
+              reapropagate_later = true;
+              PUSH (ring->reapropagate_later, lit);
+            }
+          } else
+            conflict = watch;
+          if (conflict && stop_at_conflict)
             break;
         } else if (!other_value) {
           struct watch *reason = tag_binary (false, other, not_lit);
@@ -141,14 +136,22 @@ struct watch *ring_reapropagate (struct ring *ring, bool stop_at_conflict,
       unsigned blocking_idx = IDX (blocking);
       struct variable *vblock = variables + blocking_idx;
       
-      if (vblock->level > v->level && blocking_value > 0)
+      // TODO: not sure if this breaks watch invariant for reimply
+      // if blocking != other
+      if (vblock->level <= v->level && blocking_value > 0)
         continue;
 
       if (is_binary_pointer (watch)) {
         assert (lit_pointer (watch) == not_lit);
         if (blocking_value < 0) {
-          conflict = watch;
-          if (stop_at_conflict)
+          if (vblock->level > v->level) {
+            if (!reapropagate_later) {
+              reapropagate_later = true;
+              PUSH (ring->reapropagate_later, lit);
+            }
+          } else
+            conflict = watch;
+          if (conflict && stop_at_conflict)
             break;
         } else if (!blocking_value) {
           // Only learned and thus redundant clauses are kept as
@@ -168,7 +171,8 @@ struct watch *ring_reapropagate (struct ring *ring, bool stop_at_conflict,
           assign_with_reason (ring, blocking, reason);
           ticks++;
         } else {
-          // always elevate
+          if (vblock->level <= v->level) continue;
+          // elevate
           struct watch *reason = tag_binary (true, blocking, not_lit);
           elevate_with_reason (ring, blocking, reason);
           ticks++;  // not sure exactly but probably need to increase ticks.
@@ -208,14 +212,17 @@ struct watch *ring_reapropagate (struct ring *ring, bool stop_at_conflict,
         // during traversal by adding (with 'XOR') to that difference.
 
         unsigned other = watcher->sum ^ not_lit;
+        bool conflict_on_level = true;
 
         signed char other_value;
-        if (other == blocking)
+        if (other == blocking) {
           other_value = blocking_value;
-        else {
+          if (v->level < vblock->level) conflict_on_level = false;
+        } else {
           other_value = values[other];
           unsigned other_idx = IDX (other);
           struct variable *u = variables + other_idx;
+          if (v->level < u->level) conflict_on_level = false;
           if (other_value > 0 && u->level <= v->level) {
             bool redundant = redundant_pointer (watch);
             watch = tag_index (redundant, idx, other);
@@ -254,6 +261,9 @@ struct watch *ring_reapropagate (struct ring *ring, bool stop_at_conflict,
               replacement_value = values[replacement];
               if (replacement_value >= 0)
                 break;
+              if (conflict_on_level &&
+                v->level < (variables + IDX (replacement))->level)
+                conflict_on_level = false;
             }
           }
         } else {
@@ -290,6 +300,9 @@ struct watch *ring_reapropagate (struct ring *ring, bool stop_at_conflict,
               replacement_value = values[replacement];
               if (replacement_value >= 0)
                 break;
+              if (conflict_on_level &&
+                v->level < (variables + IDX (replacement))->level)
+                conflict_on_level = false;
             }
             r++;
           }
@@ -301,6 +314,9 @@ struct watch *ring_reapropagate (struct ring *ring, bool stop_at_conflict,
                 replacement_value = values[replacement];
                 if (replacement_value >= 0)
                   break;
+                if (conflict_on_level &&
+                  v->level < (variables + IDX (replacement))->level)
+                  conflict_on_level = false;
               }
               r++;
             }
@@ -315,8 +331,14 @@ struct watch *ring_reapropagate (struct ring *ring, bool stop_at_conflict,
           ticks++;
           q--;
         } else if (other_value < 0) {
-          conflict = watch;
-          if (stop_at_conflict)
+          if (!conflict_on_level) {
+            if (!reapropagate_later) {
+              reapropagate_later = true;
+              PUSH (ring->reapropagate_later, lit);
+            }
+          } else
+            conflict = watch;
+          if (conflict && stop_at_conflict)
             break;
         } else if (other_value > 0) {
           replacement = maybe_elevate_with_reason (ring, other, watch);

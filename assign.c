@@ -90,15 +90,12 @@ static void assign (struct ring *ring, unsigned lit, struct watch *reason,
   *trail->end++ = lit;
 
   if (ring->options.reimply) {
-    // TODO: switch comments
-    uint64_t res = ring->level;
-    // uint64_t res = assignment_level;
+    uint64_t res = assignment_level;
     assert (pos < UINT_MAX);
     res <<= 32;
     res |= pos;
     LOG ("push %s on reap with level %d and pos %ld = key %"
          PRId64, LOGLIT (lit), assignment_level, pos, res);
-    // TODO: incorrect for out of order assignments -> reimply fixes this
     reap_push (&ring->reap, res);
   }
   

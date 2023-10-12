@@ -21,7 +21,6 @@ void reap_push (struct reap *, uint64_t);
 void reap_clear (struct reap *);
 uint64_t reap_pop (struct reap *);
 
-
 static inline bool reap_empty (struct reap *reap) { return !reap->num_elements; }
 static inline size_t reap_size (struct reap *reap) { return reap->num_elements; }
 

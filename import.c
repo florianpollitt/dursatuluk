@@ -88,7 +88,8 @@ static void force_to_repropagate (struct ring *ring, unsigned lit) {
   // should work with reimply but not for now
   ring->trail.propagate = propagate;
   if (ring->options.reimply)
-    init_reapropagate (ring, propagate);
+    REAP_PUSH (lit, ring);
+  // init_reapropagate (ring, propagate);
   LOG ("setting end of trail to %zu", pos);
   if (!ring->level)
     ring->iterating = -1;

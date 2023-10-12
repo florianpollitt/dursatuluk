@@ -138,6 +138,7 @@ struct ring {
   struct queue queue;
   struct reap reap;
   struct reap analyze_reap;
+  struct unsigneds reapropagate_later;
 
   unsigned tier2;
   unsigned redundant;
