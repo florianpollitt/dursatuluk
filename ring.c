@@ -94,7 +94,7 @@ void init_ring (struct ring *ring) {
 
   reap_init (&ring->reap);
   reap_init (&ring->analyze_reap);
-  INIT (ring->reapropagate_later); // why are stacks not initialized to zero?
+  // INIT (ring->reapropagate_later); // ring is zero initialized
 
   struct ring_units *units = &ring->ring_units;
   assert (!units->begin);
