@@ -96,6 +96,7 @@ static void assign (struct ring *ring, unsigned lit, struct watch *reason,
     res |= pos;
     LOG ("push %s on reap with level %d and pos %ld = key %"
          PRId64, LOGLIT (lit), assignment_level, pos, res);
+    assert (reap_size (&ring->reap) < ring->size);
     reap_push (&ring->reap, res);
   }
   

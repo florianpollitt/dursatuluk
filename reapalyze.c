@@ -151,6 +151,7 @@ static void reap_update_decision_rate (struct ring *ring) {
     if (OTHER_LEVEL == conflict_level) { \
       uint64_t pos = trail->pos[OTHER_IDX]; \
       pos = -pos - 1; \
+      assert (reap_size (&ring->reap) < ring->size); \
       reap_push (reap, -trail->pos[OTHER_IDX]-1); \
       open++; \
       break; \

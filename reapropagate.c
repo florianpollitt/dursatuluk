@@ -41,7 +41,7 @@ struct watch *ring_reapropagate (struct ring *ring, bool stop_at_conflict,
     uint64_t reap_element = reap_pop (reap);
     unsigned pos = (unsigned) reap_element;  // is this cast always correct?
     unsigned lit = trail->begin[pos];
-    if (!lit) continue;  // trail pos gets cleared for elevated literals
+    if (lit == INVALID_LIT) continue;  // trail pos gets cleared for elevated literals
     struct variable *v = variables + IDX (lit);
     assert ((unsigned) (reap_element >> 32) == v->level);
     bool reapropagate_later = false;

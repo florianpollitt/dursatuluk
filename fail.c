@@ -80,8 +80,8 @@ void failed_literal_probing (struct ring *ring) {
     LOG ("probing literal %s", LOGLIT (probe));
     assign_decision (ring, probe);
     struct ring_trail *trail = &ring->trail;
-    unsigned *saved = trail->propagate;
-    assert (saved + 1 == trail->end);
+    unsigned *saved = trail->end - 1;
+    assert (saved == trail->propagate || ring->options.reimply);
     bool ok = !ring_propagate (ring, false, 0);
     unsigned unit = INVALID;
     if (ok) {

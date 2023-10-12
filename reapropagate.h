@@ -27,6 +27,7 @@ struct watch *ring_reapropagate (struct ring *, bool stop_at_conflict,
     RES <<= 32; \
     RES |= POS; \
     LOG ("push %s on reap with level %d and pos %ld = key %" PRId64, LOGLIT (lit), LIT_LEVEL, POS, RES); \
+    assert (reap_size (&ring->reap) < ring->size); \
     reap_push (&RING->reap, RES); \
   } while (0)
 

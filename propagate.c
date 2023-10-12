@@ -8,7 +8,7 @@
 
 struct watch *ring_propagate (struct ring *ring, bool stop_at_conflict,
                               struct clause *ignore) {
-  if (ring->options.reimply)
+  if (ring->options.reimply) // ring->context == SEARCH_CONTEXT && 
     return ring_reapropagate (ring, stop_at_conflict, ignore);
   assert (!ring->inconsistent);
   assert (!ignore || !is_binary_pointer (ignore));

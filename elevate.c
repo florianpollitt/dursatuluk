@@ -17,13 +17,13 @@ static unsigned elevate (struct ring *ring, unsigned lit, struct watch *reason,
   assert (idx < ring->size);
   assert (ring->values[lit]);
   assert (ring->values[NOT (lit)]);
-  assert (!ring->inactive[idx]);
+  assert (!ring->inactive[idx] || type == USE_REASON_MAYBE);
 
   struct variable *v = ring->variables + idx;
   const unsigned level = v->level;
   unsigned replacement = 0;
   assert (level <= ring->level);
-  assert (ring->level > 0);
+  assert (ring->level > 0 || type == USE_REASON_MAYBE);
   if (type == UNIT_REASON) {
     assert (!assignment_level);
     assert (!reason);
@@ -104,6 +104,7 @@ static unsigned elevate (struct ring *ring, unsigned lit, struct watch *reason,
   res |= pos;
   LOG ("push %s on reap with level %d and pos %ld = key %"
        PRId64, LOGLIT (lit), assignment_level, pos, res);
+  assert (reap_size (&ring->reap) < ring->size);
   reap_push (&ring->reap, res);
   
 #ifdef LOGGING

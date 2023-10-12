@@ -4,6 +4,21 @@
 #include <string.h>
 #include <stdint.h>
 
+#ifndef NDEBUG
+#include "logging.h"
+#include "ring.h"
+
+void reap_elements (struct reap *reap, struct ring *ring) {
+  for (unsigned i = 0; i < 65; i++) {
+    for (uint64_t *e = reap->buckets[i].begin; e != reap->buckets[i].end; e++) {
+      unsigned pos = (unsigned) *e;  // is this cast always correct?
+      unsigned level = *e >> 32;
+      LOG ("key %" PRId64 " level %d trail %d", *e, level, pos);
+    }
+  }
+}
+#endif
+
 void reap_init (struct reap *reap) {
   reap->num_elements = 0;
   reap->last_deleted = 0;
@@ -107,7 +122,7 @@ uint64_t reap_pop (struct reap *reap) {
           reap->max_bucket = i - 1;
       }
     } else {    // (B)
-      // can only happen if same element is pushed multiple times
+      // can only happen if same element is pushed multiple times or 0 is pushed
       assert (!EMPTY (reap->buckets[0]));
       assert (PEEK (reap->buckets[0], 0) == reap->last_deleted);
       res = POP (reap->buckets[0]);
