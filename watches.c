@@ -98,8 +98,8 @@ struct watch *watch_literals_in_large_clause (struct ring *ring,
 
   unsigned size = clause->size;
   unsigned glue = clause->glue;
-  if (ring->options.increase_imported_glue && clause->origin != ring->id)
-    glue++;
+  // if (ring->options.increase_imported_glue && clause->origin != ring->id)
+  //  glue++;
   bool redundant = clause->redundant;
 
   if (size > SIZE_WATCHER_LITERALS)
