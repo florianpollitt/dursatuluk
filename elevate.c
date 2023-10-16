@@ -15,13 +15,13 @@ static unsigned elevate (struct ring *ring, unsigned lit, struct watch *reason,
   unsigned idx = IDX (lit);
 
   assert (idx < ring->size);
-  assert (ring->values[lit]);
-  assert (ring->values[NOT (lit)]);
+  assert (ring->values[lit] > 0);
+  assert (ring->values[NOT (lit)] < 0);
   assert (!ring->inactive[idx] || type == USE_REASON_MAYBE);
 
   struct variable *v = ring->variables + idx;
   const unsigned level = v->level;
-  unsigned replacement = 0;
+  unsigned replacement = INVALID_LIT;
   assert (level <= ring->level);
   assert (ring->level > 0 || type == USE_REASON_MAYBE);
   if (type == UNIT_REASON) {
@@ -34,13 +34,13 @@ static unsigned elevate (struct ring *ring, unsigned lit, struct watch *reason,
   } else if (is_binary_pointer (reason)) {
     unsigned other = other_pointer (reason);
     unsigned other_idx = IDX (other);
-    replacement = other;
     struct variable *u = ring->variables + other_idx;
     assignment_level = u->level;
     if (type == USE_REASON_MAYBE && assignment_level >= level) {
       LOGWATCH (reason, "not elevating %s reason", LOGLIT (lit));
-      return 0;
+      return INVALID_LIT;
     }
+    replacement = other;
     if (assignment_level && is_binary_pointer (u->reason)) {
       bool redundant =
           redundant_pointer (reason) || redundant_pointer (u->reason);
@@ -62,11 +62,12 @@ static unsigned elevate (struct ring *ring, unsigned lit, struct watch *reason,
     }
   }
 
+  assert (type == UNIT_REASON || type == USE_LEVEL || replacement != INVALID_LIT);
   assert (assignment_level <= ring->level);
   if (type == USE_REASON_MAYBE && assignment_level >= level) {
     assert (reason);
     LOGWATCH (reason, "not elevating %s reason", LOGLIT (lit));
-    return 0;
+    return INVALID_LIT;
   }
   assert (assignment_level < level);
   v->level = assignment_level;
@@ -136,7 +137,7 @@ unsigned maybe_elevate_with_reason (struct ring *ring, unsigned lit,
   unsigned replacement = elevate (ring, lit, reason, 0, USE_REASON_MAYBE);
   
 #ifdef LOGGING
-  if (replacement)
+  if (replacement != INVALID_LIT)
     LOGWATCH (reason, "elevate %s with reason", LOGLIT (lit));
 #endif
   return replacement;

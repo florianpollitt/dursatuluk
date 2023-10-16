@@ -8,6 +8,7 @@
 #include "export.h"
 #include "macros.h"
 #include "minimize.h"
+#include "reapropagate.h"
 #include "ring.h"
 #include "sort.h"
 #include "trace.h"
@@ -152,7 +153,7 @@ static void reap_update_decision_rate (struct ring *ring) {
       uint64_t pos = trail->pos[OTHER_IDX]; \
       pos = -pos - 1; \
       assert (reap_size (&ring->reap) < ring->size); \
-      reap_push (reap, -trail->pos[OTHER_IDX]-1); \
+      reap_push (reap, pos); \
       open++; \
       break; \
     } \
@@ -212,6 +213,7 @@ bool reapalyze (struct ring *ring, struct watch *reason) {
   }
   if (literals_on_conflict_level == 1) {
     LOG ("only literal %s on conflict level", LOGLIT (forced_literal));
+    assert (false);   // reimply should completely avoid this!!
     backtrack (ring, conflict_level - 1);
     LOGWATCH (reason, "forcing %s through", LOGLIT (forced_literal));
     if (is_binary_pointer (reason)) {
@@ -313,7 +315,8 @@ bool reapalyze (struct ring *ring, struct watch *reason) {
       ring->statistics.contexts[ring->context].chronological++;
     }
   }
-  // TODO: push reapropagate_later lits on reap.
+  // push reapropagate_later lits on reap.
+  push_reapropagate_later (ring);
   unsigned size = SIZE (*ring_clause);
   assert (size);
   if (size == 1) {

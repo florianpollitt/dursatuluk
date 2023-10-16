@@ -7,7 +7,7 @@
 #define UNIT_REASON 1
 #define REAL_REASON 2
 
-static void assign (struct ring *ring, unsigned lit, struct watch *reason,
+static unsigned assign (struct ring *ring, unsigned lit, struct watch *reason,
                     int type) {
   const unsigned not_lit = NOT (lit);
   unsigned idx = IDX (lit);
@@ -29,6 +29,7 @@ static void assign (struct ring *ring, unsigned lit, struct watch *reason,
   struct variable *v = ring->variables + idx;
   unsigned level = ring->level;
   unsigned assignment_level;
+  unsigned replacement = INVALID_LIT;
   if (type == DECISION_REASON)
     assignment_level = level, reason = 0;
   else if (type == UNIT_REASON)
@@ -40,6 +41,7 @@ static void assign (struct ring *ring, unsigned lit, struct watch *reason,
     unsigned other_idx = IDX (other);
     struct variable *u = ring->variables + other_idx;
     assignment_level = u->level;
+    replacement = other;
     if (assignment_level && is_binary_pointer (u->reason)) {
       bool redundant =
           redundant_pointer (reason) || redundant_pointer (u->reason);
@@ -61,8 +63,10 @@ static void assign (struct ring *ring, unsigned lit, struct watch *reason,
       unsigned other_idx = IDX (other);
       struct variable *u = ring->variables + other_idx;
       unsigned other_level = u->level;
-      if (other_level > assignment_level)
+      if (other_level > assignment_level) {
         assignment_level = other_level;
+        replacement = other;
+      }
     }
   }
 
@@ -108,23 +112,33 @@ static void assign (struct ring *ring, unsigned lit, struct watch *reason,
       LOG ("out-of-order assignment %s", LOGLIT (lit));
   }
 #endif
+  return replacement;
 }
 
 void assign_with_reason (struct ring *ring, unsigned lit,
                          struct watch *reason) {
   assert (reason);
-  assign (ring, lit, reason, REAL_REASON);
+  (void) assign (ring, lit, reason, REAL_REASON);
   LOGWATCH (reason, "assign %s with reason", LOGLIT (lit));
 }
 
+unsigned replace_assign_with_reason (struct ring *ring, unsigned lit,
+                         struct watch *reason) {
+  assert (reason);
+  unsigned replacement = assign (ring, lit, reason, REAL_REASON);
+  assert (replacement != INVALID_LIT);
+  LOGWATCH (reason, "assign %s with replacement %s and reason", LOGLIT (lit), LOGLIT (replacement));
+  return replacement;
+}
+
 void assign_ring_unit (struct ring *ring, unsigned unit) {
-  assign (ring, unit, 0, UNIT_REASON);
+  (void) assign (ring, unit, 0, UNIT_REASON);
   LOG ("assign %s unit", LOGLIT (unit));
 }
 
 void assign_decision (struct ring *ring, unsigned decision) {
   assert (ring->level);
-  assign (ring, decision, 0, DECISION_REASON);
+  (void) assign (ring, decision, 0, DECISION_REASON);
 #ifdef LOGGING
   if (ring->context == WALK_CONTEXT)
     LOG ("assign %s decision warm-up", LOGLIT (decision));

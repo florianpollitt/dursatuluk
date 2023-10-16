@@ -764,7 +764,9 @@ static bool synchronize_exported_and_imported_units (struct ring *ring) {
             set_inconsistent (ring,
                               "propagation after importing shared failed");
 
-  assert (ring->inconsistent || ring->trail.propagate == ring->trail.end);
+  assert (ring->inconsistent || 
+         (ring->options.reimply && reap_empty (&ring->reap)) ||
+          ring->trail.propagate == ring->trail.end);
 
   return !ring->inconsistent;
 }

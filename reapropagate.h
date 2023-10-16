@@ -6,6 +6,8 @@
 struct clause;
 struct ring;
 
+void push_reapropagate_later (struct ring *ring);
+
 void init_reapropagate (struct ring *ring, unsigned *propagate);
 
 struct watch *ring_reapropagate (struct ring *, bool stop_at_conflict,

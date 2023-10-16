@@ -348,7 +348,8 @@ void set_inconsistent (struct ring *ring, const char *msg) {
 void set_satisfied (struct ring *ring) {
   assert (!ring->inconsistent);
   assert (!ring->unassigned);
-  assert (ring->trail.propagate == ring->trail.end);
+  assert ((ring->options.reimply && reap_empty (&ring->reap)) ||
+           ring->trail.propagate == ring->trail.end);
   ring->status = 10;
   set_winner (ring);
 }

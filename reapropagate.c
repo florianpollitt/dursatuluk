@@ -7,6 +7,18 @@
 #include "ruler.h"
 #include "utilities.h"
 
+void push_reapropagate_later (struct ring *ring) {
+  struct reap *reap = &ring->reap;
+  struct unsigneds *later = &ring->reapropagate_later;
+  assert (reap_empty (reap));
+  for (unsigned *p = later->begin; p != later->end; ++p) {
+    unsigned lit = *p;
+    assert (ring->values[lit] >= 0);
+    if (ring->values[lit] > 0)
+      REAP_PUSH (lit, ring);
+  }
+  CLEAR (*later);
+}
 
 void init_reapropagate (struct ring *ring, unsigned *propagate) {
   // TODO: think about usage
@@ -50,7 +62,7 @@ struct watch *ring_reapropagate (struct ring *ring, bool stop_at_conflict,
     // difference between global assignments and unpropagated literals.
     // trail->propagate++;
 
-    LOG ("propagating %s", LOGLIT (lit));
+    LOG ("reapropagating %s", LOGLIT (lit));
     propagations++;
     unsigned not_lit = NOT (lit);
     struct references *watches = &REFERENCES (not_lit);
@@ -351,7 +363,15 @@ struct watch *ring_reapropagate (struct ring *ring, bool stop_at_conflict,
           }
           ticks++;
         } else {
-          assign_with_reason (ring, other, watch);
+          replacement = replace_assign_with_reason (ring, other, watch);
+          assert (replacement != INVALID_LIT);
+          if (replacement != lit) {
+            watcher->sum = other ^ replacement;
+            LOGCLAUSE (clause, "unwatching %s in", LOGLIT (not_lit));
+            watch_literal (ring, replacement, other, watcher);
+            ticks++;
+            q--;
+          }
           ticks++;
         }
       }

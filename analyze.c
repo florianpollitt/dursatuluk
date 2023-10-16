@@ -221,7 +221,7 @@ bool analyze (struct ring *ring, struct watch *reason) {
       bool redundant = redundant_pointer (reason);
       reason = tag_binary (redundant, forced_literal, other);
     }
-    assign_with_reason (ring, forced_literal, reason);
+    (void) assign_with_reason (ring, forced_literal, reason);
     return true;
   } else
     LOG ("conflict has %u literals on conflict level",

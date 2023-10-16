@@ -11,7 +11,8 @@ void warming_up_saved_phases (struct ring *ring) {
   if (!ring->options.warm_up_walking)
     return;
   assert (!ring->level);
-  assert (ring->trail.propagate == ring->trail.end);
+  assert ((ring->options.reimply && reap_empty (&ring->reap)) ||
+           ring->trail.propagate == ring->trail.end);
 #ifndef QUIET
   uint64_t decisions = 0, conflicts = 0;
 #endif
