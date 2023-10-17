@@ -355,7 +355,7 @@ struct watch *ring_reapropagate (struct ring *ring, bool stop_at_conflict,
         } else if (other_value > 0) {
           replacement = maybe_elevate_with_reason (ring, other, watch);
           assert (replacement != INVALID_LIT);
-          if (replacement != lit) {
+          if (replacement != not_lit) {
             watcher->sum = other ^ replacement;
             LOGCLAUSE (clause, "unwatching %s in", LOGLIT (not_lit));
             watch_literal (ring, replacement, other, watcher);
@@ -366,7 +366,7 @@ struct watch *ring_reapropagate (struct ring *ring, bool stop_at_conflict,
         } else {
           replacement = replace_assign_with_reason (ring, other, watch);
           assert (replacement != INVALID_LIT);
-          if (replacement != lit) {
+          if (replacement != not_lit) {
             watcher->sum = other ^ replacement;
             LOGCLAUSE (clause, "unwatching %s in", LOGLIT (not_lit));
             watch_literal (ring, replacement, other, watcher);
