@@ -78,6 +78,10 @@ void release_references (struct ring *);
 void disconnect_references (struct ring *, struct watches *);
 void sort_redundant_watcher_indices (struct ring *, size_t, unsigned *);
 
+#ifndef NDEBUG
+void test_watch_invariant (struct ring *ring);
+#endif
+
 /*------------------------------------------------------------------------*/
 
 #endif

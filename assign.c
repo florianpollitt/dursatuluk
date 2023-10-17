@@ -88,9 +88,9 @@ static unsigned assign (struct ring *ring, unsigned lit, struct watch *reason,
 
   struct ring_trail *trail = &ring->trail;
   size_t pos = SIZE (*trail);
-  assert (pos < ring->size);
+  assert (pos < ring->size || ring->options.reimply);
   trail->pos[idx] = pos;
-  assert (trail->end < trail->begin + ring->size);
+  assert (trail->end < trail->begin + ring->size || ring->options.reimply);
   *trail->end++ = lit;
 
   if (ring->options.reimply) {
@@ -126,7 +126,7 @@ unsigned replace_assign_with_reason (struct ring *ring, unsigned lit,
                          struct watch *reason) {
   assert (reason);
   unsigned replacement = assign (ring, lit, reason, REAL_REASON);
-  assert (replacement != INVALID_LIT);
+  assert (replacement != INVALID_LIT || !(ring->variables + IDX (lit))->level);
   LOGWATCH (reason, "assign %s with replacement %s and reason", LOGLIT (lit), LOGLIT (replacement));
   return replacement;
 }

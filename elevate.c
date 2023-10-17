@@ -36,11 +36,11 @@ static unsigned elevate (struct ring *ring, unsigned lit, struct watch *reason,
     unsigned other_idx = IDX (other);
     struct variable *u = ring->variables + other_idx;
     assignment_level = u->level;
+    replacement = other;
     if (type == USE_REASON_MAYBE && assignment_level >= level) {
       LOGWATCH (reason, "not elevating %s reason", LOGLIT (lit));
-      return INVALID_LIT;
+      return replacement;
     }
-    replacement = other;
     if (assignment_level && is_binary_pointer (u->reason)) {
       bool redundant =
           redundant_pointer (reason) || redundant_pointer (u->reason);
@@ -67,7 +67,7 @@ static unsigned elevate (struct ring *ring, unsigned lit, struct watch *reason,
   if (type == USE_REASON_MAYBE && assignment_level >= level) {
     assert (reason);
     LOGWATCH (reason, "not elevating %s reason", LOGLIT (lit));
-    return INVALID_LIT;
+    return replacement;
   }
   assert (assignment_level < level);
   v->level = assignment_level;
@@ -89,7 +89,7 @@ static unsigned elevate (struct ring *ring, unsigned lit, struct watch *reason,
   
   // clearing old trail position to avoid confusion
   size_t old_pos = trail->pos[idx];
-  *(trail->begin + old_pos) = 0;
+  *(trail->begin + old_pos) = INVALID_LIT;
   
   size_t pos = SIZE (*trail);
   assert (pos < ring->size);

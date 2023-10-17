@@ -269,6 +269,7 @@ bool reapalyze (struct ring *ring, struct watch *reason) {
     do {
       assert (t > ring->trail.begin);
       debug_lit = *--t;
+      if (debug_lit == INVALID_LIT) continue;
       unsigned uip_idx = IDX (debug_lit);
       v = ring->variables + uip_idx;
     } while (!v->seen || v->level != conflict_level);

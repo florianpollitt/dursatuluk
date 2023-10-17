@@ -10,6 +10,7 @@ static void unassign (struct ring *ring, unsigned lit) {
 #endif
   unsigned not_lit = NOT (lit);
   signed char *values = ring->values;
+  assert (values[lit]);
   values[lit] = values[not_lit] = 0;
   assert (ring->unassigned < ring->size);
   ring->unassigned++;

@@ -354,8 +354,8 @@ struct watch *ring_reapropagate (struct ring *ring, bool stop_at_conflict,
             break;
         } else if (other_value > 0) {
           replacement = maybe_elevate_with_reason (ring, other, watch);
-          assert (replacement != INVALID_LIT);
-          if (replacement != not_lit) {
+          assert (replacement != INVALID_LIT || !(ring->variables + IDX (other))->level);
+          if (replacement != not_lit && replacement != INVALID_LIT) {
             watcher->sum = other ^ replacement;
             LOGCLAUSE (clause, "unwatching %s in", LOGLIT (not_lit));
             watch_literal (ring, replacement, other, watcher);
@@ -365,8 +365,8 @@ struct watch *ring_reapropagate (struct ring *ring, bool stop_at_conflict,
           ticks++;
         } else {
           replacement = replace_assign_with_reason (ring, other, watch);
-          assert (replacement != INVALID_LIT);
-          if (replacement != not_lit) {
+          assert (replacement != INVALID_LIT || !(ring->variables + IDX (other))->level);
+          if (replacement != not_lit && replacement != INVALID_LIT) {
             watcher->sum = other ^ replacement;
             LOGCLAUSE (clause, "unwatching %s in", LOGLIT (not_lit));
             watch_literal (ring, replacement, other, watcher);
@@ -404,6 +404,11 @@ struct watch *ring_reapropagate (struct ring *ring, bool stop_at_conflict,
     }
   }
 
+#ifndef NDEBUG
+  if (!conflict)
+    test_watch_invariant (ring);
+#endif
+  
   context->propagations += propagations;
   context->ticks += ticks;
 
