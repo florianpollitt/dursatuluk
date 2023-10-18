@@ -9,7 +9,8 @@
 
 
 void clear_elevated_from_trail (struct ring *ring) {
-  LOG ("clearing %d elevated literals from trail");
+  if (!ring->options.reimply || !ring->elevated_on_trail) return;
+  LOG ("clearing %d elevated literals from trail", ring->elevated_on_trail);
   struct ring_trail *trail = &ring->trail;
   unsigned *begin = trail->begin, *p = begin;
   unsigned *end = trail->end, *q = begin;
@@ -32,6 +33,7 @@ void push_reapropagate_later (struct ring *ring) {
   struct reap *reap = &ring->reap;
   struct unsigneds *later = &ring->reapropagate_later;
   assert (reap_empty (reap));
+  LOG ("push up to %ld literals from reapropagate later on reap", SIZE (*later));
   for (unsigned *p = later->begin; p != later->end; ++p) {
     unsigned lit = *p;
     assert (ring->values[lit] >= 0);  // TODO: this assertion might not be true
@@ -45,8 +47,8 @@ void init_reapropagate (struct ring *ring, unsigned *propagate) {
   // TODO: think about usage
   struct ring_trail *trail = &ring->trail;
   struct reap *reap = &ring->reap;
-  // TODO: assert (reap_empty (reap));  broken in analyze.c line 291
-  reap_clear (reap);
+  assert (reap_empty (reap));
+  // reap_clear (reap);
   const unsigned *end = trail->end;
   for (unsigned *p = propagate; p != end; ++p) {
     int lit = *p;
@@ -473,7 +475,7 @@ struct watch *ring_reapropagate (struct ring *ring, bool stop_at_conflict,
   struct ring_statistics *statistics = &ring->statistics;
   struct context *context = statistics->contexts + ring->context;
 
-  if (saved_conflict) {
+  if (!conflict && saved_conflict) {
     assert (saved_conflict_level <= ring->level);
     conflict = saved_conflict;
   }

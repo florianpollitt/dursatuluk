@@ -1,5 +1,6 @@
 #include "assign.h"
 #include "macros.h"
+#include "reapropagate.h"
 #include "ruler.h"
 #include "trace.h"
 
@@ -17,7 +18,6 @@ static unsigned elevate (struct ring *ring, unsigned lit, struct watch *reason,
     clear_elevated_from_trail (ring);
   
   assert (ring->elevated_on_trail < ring->size);
-  ring->elevated_on_trail++;
 
   unsigned idx = IDX (lit);
 
@@ -69,7 +69,7 @@ static unsigned elevate (struct ring *ring, unsigned lit, struct watch *reason,
     }
   }
 
-  assert (type == UNIT_REASON || type == USE_LEVEL || replacement != INVALID_LIT);
+  assert (type == UNIT_REASON || type == USE_LEVEL || !assignment_level || replacement != INVALID_LIT);
   assert (assignment_level <= ring->level);
   if (type == USE_REASON_MAYBE && assignment_level >= level) {
     assert (reason);
@@ -99,12 +99,12 @@ static unsigned elevate (struct ring *ring, unsigned lit, struct watch *reason,
   *(trail->begin + old_pos) = INVALID_LIT;
   
   size_t pos = SIZE (*trail);
-  // assert (pos < ring->size);
+  assert (pos < ring->size + ring->elevated_on_trail);
   trail->pos[idx] = pos;
-  // might fail...
-  // assert (trail->end < trail->begin + ring->size);
+  assert (trail->end < trail->begin + ring->size + ring->elevated_on_trail);
   *trail->end++ = lit;
 
+  ring->elevated_on_trail++;
   assert (ring->options.reimply);
   uint64_t res = assignment_level;
   assert (pos < UINT_MAX);

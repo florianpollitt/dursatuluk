@@ -3,6 +3,7 @@
 #include "macros.h"
 #include "message.h"
 #include "report.h"
+#include "reapropagate.h"
 #include "ring.h"
 #include "trace.h"
 #include "utilities.h"
@@ -250,6 +251,7 @@ static void flush_references (struct ring *ring, bool fixed, unsigned start,
 
 void reduce (struct ring *ring) {
   START (ring, reduce);
+  clear_elevated_from_trail (ring);
   check_clause_statistics (ring);
   check_redundant_and_tier2_offsets (ring);
   struct ring_statistics *statistics = &ring->statistics;
