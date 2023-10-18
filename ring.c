@@ -88,7 +88,7 @@ void init_ring (struct ring *ring) {
   struct ring_trail *trail = &ring->trail;
   assert (!trail->begin);
   assert (!trail->pos);
-  trail->end = trail->begin = allocate_array (size, sizeof *trail->begin);
+  trail->end = trail->begin = allocate_array (2 * size, sizeof *trail->begin);
   trail->propagate = trail->begin;
   trail->pos = allocate_array (size, sizeof *trail->pos);
 

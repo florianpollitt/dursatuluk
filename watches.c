@@ -301,7 +301,9 @@ void test_watch_invariant (struct ring *ring) {
         if (watcher->garbage)
           continue;
         struct clause *clause = watcher->clause;
+        LOGCLAUSE (clause, "testing watches of");
         unsigned other = watcher->sum ^ lit;
+        assert (other != lit);
         signed char other_value = values[other];
         struct variable *u = variables + IDX (other);
         unsigned other_level = u->level;
@@ -317,7 +319,7 @@ void test_watch_invariant (struct ring *ring) {
           for (unsigned *r = literals; r != end_literals; r++) {
             unsigned witness = *r;
             if (witness != lit && witness != other) {
-              unsigned witness_value = values[witness];
+              signed char witness_value = values[witness];
               struct variable *w = variables + IDX (witness);
               unsigned witness_level = w->level;
               if (witness_value > 0 && witness_level <= lit_level) {
@@ -336,7 +338,7 @@ void test_watch_invariant (struct ring *ring) {
           for (unsigned *r = literals; r != end_literals; r++) {
             unsigned witness = *r;
             if (witness != lit && witness != other) {
-              unsigned witness_value = values[witness];
+              signed char witness_value = values[witness];
               struct variable *w = variables + IDX (witness);
               unsigned witness_level = w->level;
               if (witness_value > 0 && witness_level <= lit_level) {

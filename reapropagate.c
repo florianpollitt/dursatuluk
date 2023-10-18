@@ -7,13 +7,34 @@
 #include "ruler.h"
 #include "utilities.h"
 
+
+void clear_elevated_from_trail (struct ring *ring) {
+  LOG ("clearing %d elevated literals from trail");
+  struct ring_trail *trail = &ring->trail;
+  unsigned *begin = trail->begin, *p = begin;
+  unsigned *end = trail->end, *q = begin;
+  size_t pos = 0;
+  while (p != end) {
+    unsigned lit = *q++ = *p++;
+    if (lit == INVALID_LIT) { 
+      q--;
+      continue;
+    }
+    unsigned idx = IDX (lit);
+    trail->pos[idx] = pos++;
+  }
+  trail->end = q;
+  ring->elevated_on_trail = 0;
+  assert (SIZE (*trail) == pos);
+}
+
 void push_reapropagate_later (struct ring *ring) {
   struct reap *reap = &ring->reap;
   struct unsigneds *later = &ring->reapropagate_later;
   assert (reap_empty (reap));
   for (unsigned *p = later->begin; p != later->end; ++p) {
     unsigned lit = *p;
-    assert (ring->values[lit] >= 0);
+    assert (ring->values[lit] >= 0);  // TODO: this assertion might not be true
     if (ring->values[lit] > 0)
       REAP_PUSH (lit, ring);
   }
@@ -42,20 +63,26 @@ struct watch *ring_reapropagate (struct ring *ring, bool stop_at_conflict,
   struct reap *reap = &ring->reap;
   struct variable *variables = ring->variables;
   struct watch *conflict = 0;
+  struct watch *saved_conflict = 0;
+  unsigned saved_conflict_level = INVALID;
 #ifdef METRICS
   uint64_t *visits = ring->statistics.contexts[ring->context].visits;
 #endif
   signed char *values = ring->values;
   uint64_t ticks = 0, propagations = 0;
   while (!reap_empty (reap)) {
-    if (stop_at_conflict && conflict)
-      break;
     uint64_t reap_element = reap_pop (reap);
     unsigned pos = (unsigned) reap_element;  // is this cast always correct?
     unsigned lit = trail->begin[pos];
     if (lit == INVALID_LIT) continue;  // trail pos gets cleared for elevated literals
     struct variable *v = variables + IDX (lit);
     assert ((unsigned) (reap_element >> 32) == v->level);
+    if (v->level >= saved_conflict_level) {
+      assert (saved_conflict);
+      conflict = saved_conflict;
+    }
+    if (stop_at_conflict && conflict)
+      break;
     bool reapropagate_later = false;
     // assert (*trail->propagate == lit);  // breaks with reimply
     // needed for phases...?  need different solution for reimply...
@@ -83,10 +110,15 @@ struct watch *ring_reapropagate (struct ring *ring, bool stop_at_conflict,
         signed char other_value = values[other];
         if (other_value < 0) {
           // fake conflicts need to be fixed later
-          if ((variables + IDX (other))->level > v->level) {
+          unsigned cl = (variables + IDX (other))->level;
+          if (cl > v->level) {
             if (!reapropagate_later) {
               reapropagate_later = true;
               PUSH (ring->reapropagate_later, lit);
+            }
+            if (!saved_conflict || cl < saved_conflict_level) {
+              saved_conflict_level = cl;
+              saved_conflict = watch;
             }
           } else
             conflict = watch;
@@ -161,6 +193,10 @@ struct watch *ring_reapropagate (struct ring *ring, bool stop_at_conflict,
               reapropagate_later = true;
               PUSH (ring->reapropagate_later, lit);
             }
+            if (!saved_conflict || vblock->level < saved_conflict_level) {
+              saved_conflict_level = vblock->level;
+              saved_conflict = watch;
+            }
           } else
             conflict = watch;
           if (conflict && stop_at_conflict)
@@ -224,17 +260,20 @@ struct watch *ring_reapropagate (struct ring *ring, bool stop_at_conflict,
         // during traversal by adding (with 'XOR') to that difference.
 
         unsigned other = watcher->sum ^ not_lit;
-        bool conflict_on_level = true;
+        unsigned conflict_on_level = v->level;
 
         signed char other_value;
+        struct variable *u;
+
         if (other == blocking) {
           other_value = blocking_value;
-          if (v->level < vblock->level) conflict_on_level = false;
+          u = vblock;
+          if (conflict_on_level < vblock->level) conflict_on_level = vblock->level;
         } else {
           other_value = values[other];
           unsigned other_idx = IDX (other);
-          struct variable *u = variables + other_idx;
-          if (v->level < u->level) conflict_on_level = false;
+          u = variables + other_idx;
+          if (conflict_on_level < u->level) conflict_on_level = u->level;
           if (other_value > 0 && u->level <= v->level) {
             bool redundant = redundant_pointer (watch);
             watch = tag_index (redundant, idx, other);
@@ -252,6 +291,9 @@ struct watch *ring_reapropagate (struct ring *ring, bool stop_at_conflict,
 
         unsigned replacement = INVALID;
         signed char replacement_value = -1;
+        
+        unsigned second_replacement = other;
+        signed char second_replacement_value = other_value;
 
         // The watchers can store literals of short clauses (currently
         // three or four literals long) directly in the watcher data
@@ -271,11 +313,16 @@ struct watch *ring_reapropagate (struct ring *ring, bool stop_at_conflict,
             replacement = *r;
             if (replacement != not_lit && replacement != other) {
               replacement_value = values[replacement];
-              if (replacement_value >= 0)
-                break;
-              if (conflict_on_level &&
-                v->level < (variables + IDX (replacement))->level)
-                conflict_on_level = false;
+              if (replacement_value >= 0) {
+                if (second_replacement_value >= 0) break;
+                second_replacement = replacement;
+                second_replacement_value = replacement_value;
+                replacement_value = -1;
+                continue;
+              }
+              unsigned cl = (variables + IDX (replacement))->level;
+              if (conflict_on_level < cl)
+                conflict_on_level = cl;
             }
           }
         } else {
@@ -310,11 +357,17 @@ struct watch *ring_reapropagate (struct ring *ring, bool stop_at_conflict,
             replacement = *r;
             if (replacement != not_lit && replacement != other) {
               replacement_value = values[replacement];
-              if (replacement_value >= 0)
-                break;
-              if (conflict_on_level &&
-                v->level < (variables + IDX (replacement))->level)
-                conflict_on_level = false;
+              if (replacement_value >= 0) {
+                if (second_replacement_value >= 0)
+                  break;
+                second_replacement = replacement;
+                second_replacement_value = replacement_value;
+                replacement_value = -1;
+                continue;
+              }
+              unsigned cl = (variables + IDX (replacement))->level;
+              if (conflict_on_level < cl)
+                conflict_on_level = cl;
             }
             r++;
           }
@@ -324,11 +377,17 @@ struct watch *ring_reapropagate (struct ring *ring, bool stop_at_conflict,
               replacement = *r;
               if (replacement != not_lit && replacement != other) {
                 replacement_value = values[replacement];
-                if (replacement_value >= 0)
-                  break;
-                if (conflict_on_level &&
-                  v->level < (variables + IDX (replacement))->level)
-                  conflict_on_level = false;
+                if (replacement_value >= 0) {
+                  if (second_replacement_value >= 0)
+                    break;
+                  second_replacement = replacement;
+                  second_replacement_value = replacement_value;
+                  replacement_value = -1;
+                  continue;
+                }
+                unsigned cl = (variables + IDX (replacement))->level;
+                if (conflict_on_level < cl)
+                  conflict_on_level = cl;
               }
               r++;
             }
@@ -337,44 +396,70 @@ struct watch *ring_reapropagate (struct ring *ring, bool stop_at_conflict,
         }
 
         if (replacement_value >= 0) {
+          // not a conflict, at least two literals unassigned or positive
+          assert (second_replacement_value >= 0);
+          assert (replacement != other);
           watcher->sum = other ^ replacement;
           LOGCLAUSE (clause, "unwatching %s in", LOGLIT (not_lit));
           watch_literal (ring, replacement, other, watcher);
           ticks++;
           q--;
-        } else if (other_value < 0) {
-          if (!conflict_on_level) {
-            if (!reapropagate_later) {
-              reapropagate_later = true;
-              PUSH (ring->reapropagate_later, lit);
-            }
-          } else
-            conflict = watch;
+        } else if (second_replacement_value > 0) {
+          // only one literal positive, elevate
+          replacement = maybe_elevate_with_reason (ring, second_replacement, watch);
+          assert (replacement != INVALID_LIT || !(ring->variables + IDX (second_replacement))->level);
+          if (second_replacement != other) {
+            assert (other_value < 0);
+            watcher->sum = other ^ second_replacement;
+            LOGCLAUSE (clause, "unwatching %s in", LOGLIT (not_lit));
+            watch_literal (ring, second_replacement, other, watcher);
+            ticks++;
+            q--;
+          } else if (v->level < u->level && replacement != not_lit && replacement != INVALID_LIT) {
+            watcher->sum = other ^ replacement;
+            LOGCLAUSE (clause, "unwatching %s in", LOGLIT (not_lit));
+            watch_literal (ring, replacement, other, watcher);
+            ticks++;
+            q--;
+          }
+          ticks++;
+        } else if (!second_replacement_value) {
+          // only one literal unassigned, assign
+          replacement = replace_assign_with_reason (ring, second_replacement, watch);
+          assert (replacement != INVALID_LIT || !(ring->variables + IDX (other))->level);
+          if (second_replacement != other) {
+            assert (other_value < 0);
+            watcher->sum = other ^ second_replacement;
+            LOGCLAUSE (clause, "unwatching %s in", LOGLIT (not_lit));
+            watch_literal (ring, second_replacement, other, watcher);
+            ticks++;
+            q--;
+          } else if (v->level < u->level && replacement != not_lit && replacement != INVALID_LIT) {
+            watcher->sum = other ^ replacement;
+            LOGCLAUSE (clause, "unwatching %s in", LOGLIT (not_lit));
+            watch_literal (ring, replacement, other, watcher);
+            ticks++;
+            q--;
+          }
+          ticks++;
+        } else if (conflict_on_level > v->level) {
+          // not true conflict, fix watches later (TODO: check if it necessary to change watches here...)
+          assert (other_value < 0 && second_replacement_value < 0 && replacement_value < 0);
+          if (!reapropagate_later) {
+            reapropagate_later = true;
+            PUSH (ring->reapropagate_later, lit);
+          }
+          if (!saved_conflict || conflict_on_level < saved_conflict_level) {
+            saved_conflict_level = conflict_on_level;
+            saved_conflict = watch;
+          }
+        } else {
+          // true conflict
+          assert (other_value < 0 && second_replacement_value < 0 && replacement_value < 0);
+          conflict = watch;
           if (conflict && stop_at_conflict)
             break;
-        } else if (other_value > 0) {
-          replacement = maybe_elevate_with_reason (ring, other, watch);
-          assert (replacement != INVALID_LIT || !(ring->variables + IDX (other))->level);
-          if (replacement != not_lit && replacement != INVALID_LIT) {
-            watcher->sum = other ^ replacement;
-            LOGCLAUSE (clause, "unwatching %s in", LOGLIT (not_lit));
-            watch_literal (ring, replacement, other, watcher);
-            ticks++;
-            q--;
-          }
-          ticks++;
-        } else {
-          replacement = replace_assign_with_reason (ring, other, watch);
-          assert (replacement != INVALID_LIT || !(ring->variables + IDX (other))->level);
-          if (replacement != not_lit && replacement != INVALID_LIT) {
-            watcher->sum = other ^ replacement;
-            LOGCLAUSE (clause, "unwatching %s in", LOGLIT (not_lit));
-            watch_literal (ring, replacement, other, watcher);
-            ticks++;
-            q--;
-          }
-          ticks++;
-        }
+        } 
       }
     }
     while (p != end)
@@ -388,6 +473,10 @@ struct watch *ring_reapropagate (struct ring *ring, bool stop_at_conflict,
   struct ring_statistics *statistics = &ring->statistics;
   struct context *context = statistics->contexts + ring->context;
 
+  if (saved_conflict) {
+    assert (saved_conflict_level <= ring->level);
+    conflict = saved_conflict;
+  }
   if (conflict) {
     LOGWATCH (conflict, "conflicting");
     context->conflicts++;

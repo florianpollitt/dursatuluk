@@ -213,7 +213,7 @@ bool reapalyze (struct ring *ring, struct watch *reason) {
   }
   if (literals_on_conflict_level == 1) {
     LOG ("only literal %s on conflict level", LOGLIT (forced_literal));
-    assert (false);   // reimply should completely avoid this!!
+    // assert (false);   // reimply should completely avoid this!! obviously wrong?
     backtrack (ring, conflict_level - 1);
     LOGWATCH (reason, "forcing %s through", LOGLIT (forced_literal));
     if (is_binary_pointer (reason)) {
@@ -225,6 +225,8 @@ bool reapalyze (struct ring *ring, struct watch *reason) {
       bool redundant = redundant_pointer (reason);
       reason = tag_binary (redundant, forced_literal, other);
     }
+    // push reapropagate_later lits on reap.
+    push_reapropagate_later (ring);
     assign_with_reason (ring, forced_literal, reason);
     return true;
   } else

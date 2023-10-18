@@ -114,6 +114,7 @@ struct ring {
   unsigned size;
   unsigned target;
   unsigned unassigned;
+  unsigned elevated_on_trail;
 
   signed char *marks;
   signed char *values;
@@ -268,6 +269,7 @@ static inline void push_watch (struct ring *ring, unsigned lit,
 
 static inline void watch_literal (struct ring *ring, unsigned lit,
                                   unsigned other, struct watcher *watcher) {
+  assert (lit != other);
   unsigned idx = watcher_to_index (ring, watcher);
   struct watch *watch = tag_index (watcher->redundant, idx, other);
   push_watch (ring, lit, watch);

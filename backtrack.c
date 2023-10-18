@@ -36,7 +36,12 @@ void backtrack (struct ring *ring, unsigned new_level) {
   while (t != trail->begin) {
     unsigned lit = *--t;
     assert (lit != INVALID_LIT || ring->options.reimply);
-    if (lit == INVALID_LIT) continue;
+    if (lit == INVALID_LIT) {
+      assert (ring->elevated_on_trail);
+      assert (ring->elevated_on_trail <= ring->size);
+      ring->elevated_on_trail--;
+      continue;
+    }
     unsigned idx = IDX (lit);
     struct variable *v = ring->variables + idx;
     unsigned lit_level = v->level;

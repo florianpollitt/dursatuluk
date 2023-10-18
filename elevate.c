@@ -12,6 +12,13 @@
 
 static unsigned elevate (struct ring *ring, unsigned lit, struct watch *reason,
                     unsigned assignment_level, int type) {
+
+  if (ring->elevated_on_trail == ring->size)
+    clear_elevated_from_trail (ring);
+  
+  assert (ring->elevated_on_trail < ring->size);
+  ring->elevated_on_trail++;
+
   unsigned idx = IDX (lit);
 
   assert (idx < ring->size);
@@ -92,7 +99,7 @@ static unsigned elevate (struct ring *ring, unsigned lit, struct watch *reason,
   *(trail->begin + old_pos) = INVALID_LIT;
   
   size_t pos = SIZE (*trail);
-  assert (pos < ring->size);
+  // assert (pos < ring->size);
   trail->pos[idx] = pos;
   // might fail...
   // assert (trail->end < trail->begin + ring->size);
