@@ -2,6 +2,7 @@
 #include "assign.h"
 #include "backtrack.h"
 #include "bump.h"
+#include "elevate.h"
 #include "message.h"
 #include "propagate.h"
 #include "random.h"
@@ -28,14 +29,25 @@ bool import_units (struct ring *ring) {
     signed char value = values[unit];
     unsigned unit_idx = IDX (unit);
     struct variable *v = variables + unit_idx;
-    if (value && v->level) {
-      backtrack (ring, v->level - 1);
-      assert (!values[unit]);
-      value = 0;
+    if (ring->options.reimply) {
+      if (value > 0 && !v->level)
+        continue;
+      else if (value < 0 && v->level) {
+        backtrack (ring, v->level - 1);
+        assert (!values[unit]);
+        value = 0;
+      }
     }
-    if (value > 0) {
-      assert (!v->level);
-      continue;
+    else {
+      if (value && v->level) {
+        backtrack (ring, v->level - 1);
+        assert (!values[unit]);
+        value = 0;
+      }
+      if (value > 0) {
+        assert (!v->level);
+        continue;
+      }
     }
     very_verbose (ring, "importing unit %d",
                   unmap_and_export_literal (ruler->unmap, unit));
@@ -47,8 +59,11 @@ bool import_units (struct ring *ring) {
       set_inconsistent (ring, "imported falsified unit");
       imported = INVALID;
       break;
-    }
-    assign_ring_unit (ring, unit);
+    } else if (value > 0) {
+      assert (ring->options.reimply);
+      elevate_ring_unit (ring, unit);
+    } else
+      assign_ring_unit (ring, unit);
   }
   if (pthread_mutex_unlock (&ruler->locks.units))
     fatal_error ("failed to release unit lock");
@@ -76,21 +91,24 @@ static void really_import_binary_clause (struct ring *ring, unsigned lit,
 
 static void force_to_repropagate (struct ring *ring, unsigned lit) {
   LOG ("forcing to repropagate %s", LOGLIT (lit));
-  assert (ring->values[lit] < 0);
-  unsigned idx = IDX (lit);
-  size_t pos = ring->trail.pos[idx];
-  assert (pos < SIZE (ring->trail));
-  unsigned *propagate = ring->trail.begin + pos;
-  assert (propagate < ring->trail.end);
-  assert (*propagate == NOT (lit));
-  assert (propagate < ring->trail.propagate);
-  // TODO: init reap correctly -> propably just add lit to queue
-  // should work with reimply but not for now
-  ring->trail.propagate = propagate;
-  if (ring->options.reimply)
+
+  if (ring->options.reimply) {
+    // TODO: init reap correctly -> propably just add lit to queue
+    // should work with reimply but not for now
+    // init_reapropagate (ring, propagate);
     REAP_PUSH (lit, ring);
-  // init_reapropagate (ring, propagate);
-  LOG ("setting end of trail to %zu", pos);
+  } else {
+    assert (ring->values[lit] < 0);
+    unsigned idx = IDX (lit);
+    size_t pos = ring->trail.pos[idx];
+    assert (pos < SIZE (ring->trail));
+    unsigned *propagate = ring->trail.begin + pos;
+    assert (propagate < ring->trail.end);
+    assert (*propagate == NOT (lit));
+    assert (propagate < ring->trail.propagate);
+    ring->trail.propagate = propagate;
+    LOG ("setting end of trail to %zu", pos);
+  }
   if (!ring->level)
     ring->iterating = -1;
 }
