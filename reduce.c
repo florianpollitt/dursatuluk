@@ -66,7 +66,6 @@ void check_redundant_and_tier2_offsets (struct ring *ring) {
   struct watchers *watchers = &ring->watchers;
   struct watcher *begin = watchers->begin;
   struct watcher *redundant = begin + ring->redundant;
-  struct watcher *tier2 = begin + ring->tier2;
   struct watcher *end = watchers->end;
 
   for (struct watcher *watcher = begin; watcher != redundant; watcher++)
@@ -75,15 +74,7 @@ void check_redundant_and_tier2_offsets (struct ring *ring) {
   assert (begin <= redundant);
   assert (redundant <= end);
 
-  for (struct watcher *watcher = redundant; watcher != tier2; watcher++) {
-    assert (watcher->redundant);
-    assert (watcher->glue <= TIER1_GLUE_LIMIT);
-  }
-
-  assert (redundant <= tier2);
-  assert (tier2 <= end);
-
-  for (struct watcher *watcher = tier2; watcher != end; watcher++)
+  for (struct watcher *watcher = redundant; watcher != end; watcher++)
     assert (watcher->redundant);
 #else
   (void) ring;
@@ -146,20 +137,24 @@ static void gather_reduce_candidates (struct ring *ring,
   struct watchers *watchers = &ring->watchers;
   struct watcher *begin = watchers->begin;
   struct watcher *end = watchers->end;
-  struct watcher *tier2 = begin + ring->tier2;
-  for (struct watcher *watcher = tier2; watcher != end; watcher++) {
+  struct watcher *redundant = begin + ring->redundant;
+  for (struct watcher *watcher = redundant; watcher != end; watcher++) {
     if (watcher->garbage)
-      continue;
-    if (watcher->reason)
       continue;
     if (!watcher->redundant)
       continue;
-    if (watcher->glue <= TIER1_GLUE_LIMIT)
+    const unsigned char used = watcher->used;
+    if (used)
+      watcher->used = used - 1;
+    if (used == MAX_USED)
       continue;
-    if (watcher->used) {
-      watcher->used--;
+    const unsigned char glue = watcher->glue;
+    if (glue <= TIER1_GLUE_LIMIT && used)
       continue;
-    }
+    if (glue <= TIER2_GLUE_LIMIT && used == MAX_USED - 1)
+      continue;
+    if (watcher->reason)
+      continue;
     unsigned idx = watcher_to_index (ring, watcher);
     PUSH (*candidates, idx);
   }
@@ -264,7 +259,7 @@ void reduce (struct ring *ring) {
   if (fixed)
     mark_satisfied_watchers_as_garbage (ring);
   else
-    start = ring->tier2;
+    start = ring->redundant;
   mark_reasons (ring, start);
   struct unsigneds candidates;
   INIT (candidates);
