@@ -115,12 +115,6 @@ static unsigned elevate (struct ring *ring, unsigned lit, struct watch *reason,
   assert (reap_size (&ring->reap) < ring->size);
   reap_push (&ring->reap, res);
   
-#ifdef LOGGING
-  if (reason)
-    LOGWATCH (reason, "elevating %s reason", LOGLIT (lit));
-  else
-    LOG ("elevating %s", LOGLIT (lit));
-#endif
   return replacement;
 }
 

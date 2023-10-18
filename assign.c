@@ -127,7 +127,7 @@ unsigned replace_assign_with_reason (struct ring *ring, unsigned lit,
   assert (reason);
   unsigned replacement = assign (ring, lit, reason, REAL_REASON);
   assert (replacement != INVALID_LIT || !(ring->variables + IDX (lit))->level);
-#ifndef NDEBUG
+#ifndef LOGGING
   if (replacement != INVALID_LIT)
     LOGWATCH (reason, "assign %s with replacement %s and reason", LOGLIT (lit), LOGLIT (replacement));
   else 
