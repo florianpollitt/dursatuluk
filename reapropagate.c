@@ -497,7 +497,7 @@ struct watch *ring_reapropagate (struct ring *ring, bool stop_at_conflict,
 
 #ifndef NDEBUG
   if (!conflict)
-    test_watch_invariant (ring);
+    test_watch_invariant (ring, ignore);
 #endif
   
   context->propagations += propagations;

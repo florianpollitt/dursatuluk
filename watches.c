@@ -241,8 +241,16 @@ void mark_garbage_watcher (struct ring *ring, struct watcher *watcher) {
 }
 
 #ifndef NDEBUG
-void test_watch_invariant (struct ring *ring) {
+void test_watch_invariant (struct ring *ring, struct clause *ignore) {
   LOG ("testing watch invariants");
+  if (ring->context == WALK_CONTEXT) {
+    LOG ("not testing because of warmup");
+    return;
+  }
+  if (ignore) {
+    LOG ("not testing because of vivification");
+    return;
+  }
   assert (ring->options.reimply);
   struct variable *variables = ring->variables;
   signed char *values = ring->values;
