@@ -25,8 +25,8 @@ void clear_elevated_from_trail (struct ring *ring) {
     trail->pos[idx] = pos++;
   }
   trail->end = q;
+  ring->statistics.trail_clears += ring->elevated_on_trail;
   ring->elevated_on_trail = 0;
-  ring->statistics.trail_clears++;
   assert (SIZE (*trail) == pos);
 }
 
@@ -97,6 +97,7 @@ struct watch *ring_reapropagate (struct ring *ring, bool stop_at_conflict,
     LOG ("reapropagating %s", LOGLIT (lit));
     propagations++;
     unsigned not_lit = NOT (lit);
+    // if (!values[not_lit]) continue; TODO: fix this bug because it breaks reap invariant
     assert (values[not_lit] < 0);
     struct references *watches = &REFERENCES (not_lit);
 
@@ -452,7 +453,7 @@ struct watch *ring_reapropagate (struct ring *ring, bool stop_at_conflict,
           }
           ticks++;
         } else if (conflict_on_level > v->level) {
-          // not true conflict, fix watches later (TODO: check if it necessary to change watches here...)
+          // not true conflict, fix watches later
           assert (other_value < 0 && second_replacement_value < 0 && replacement_value < 0);
           if (!reapropagate_later) {
             reapropagate_later = true;
@@ -477,7 +478,8 @@ struct watch *ring_reapropagate (struct ring *ring, bool stop_at_conflict,
     watches->end = q;
     if (q == watches->begin)
       RELEASE (*watches);
-#ifndef NDEBUG
+#if 0
+    // ifndef NDEBUG to slow...
     if (!conflict && !reapropagate_later)
       test_watch_invariant_for_lit (ring, not_lit, ignore);
 #endif
