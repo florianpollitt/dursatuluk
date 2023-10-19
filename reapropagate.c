@@ -44,7 +44,7 @@ void push_reapropagate_later (struct ring *ring) {
 }
 
 void init_reapropagate (struct ring *ring, unsigned *propagate) {
-  // TODO: think about usage
+  // only used after walk
   struct ring_trail *trail = &ring->trail;
   struct reap *reap = &ring->reap;
   assert (reap_empty (reap));
@@ -52,6 +52,8 @@ void init_reapropagate (struct ring *ring, unsigned *propagate) {
   const unsigned *end = trail->end;
   for (unsigned *p = propagate; p != end; ++p) {
     int lit = *p;
+    if (lit == INVALID_LIT) continue;
+    // assert (ring->values[lit] > 0); -> fails because values are fixed later
     REAP_PUSH (lit, ring);
   }
 }
@@ -94,6 +96,7 @@ struct watch *ring_reapropagate (struct ring *ring, bool stop_at_conflict,
     LOG ("reapropagating %s", LOGLIT (lit));
     propagations++;
     unsigned not_lit = NOT (lit);
+    assert (values[not_lit] < 0);
     struct references *watches = &REFERENCES (not_lit);
 
     // First traverse all irredundant (globally shared) binary clauses
@@ -470,8 +473,10 @@ struct watch *ring_reapropagate (struct ring *ring, bool stop_at_conflict,
     watches->end = q;
     if (q == watches->begin)
       RELEASE (*watches);
+#ifndef NDEBUG
     if (!conflict && !reapropagate_later)
       test_watch_invariant_for_lit (ring, not_lit, ignore);
+#endif
   }
 
   struct ring_statistics *statistics = &ring->statistics;

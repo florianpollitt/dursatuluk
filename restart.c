@@ -39,6 +39,7 @@ void restart (struct ring *ring) {
                 statistics->restarts, SEARCH_CONFLICTS);
   update_best_and_target_phases (ring);
   backtrack (ring, 0);
+  reap_clear (&ring->reap);
   struct ring_limits *limits = &ring->limits;
   uint64_t interval;
   if (ring->stable) {

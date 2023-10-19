@@ -23,6 +23,7 @@ bool import_units (struct ring *ring) {
   unsigned imported = 0;
   if (pthread_mutex_lock (&ruler->locks.units))
     fatal_error ("failed to acquire unit lock");
+  assert (reap_empty (&ring->reap));
   while (ring->ruler_units != ruler->units.end) {
     unsigned unit = *ring->ruler_units++;
     LOG ("trying to import unit %s", LOGLIT (unit));
@@ -95,7 +96,7 @@ static void force_to_repropagate (struct ring *ring, unsigned lit) {
   if (ring->options.reimply) {
     // TODO: init reap correctly -> propably just add lit to queue
     // should work with reimply but not for now
-    // init_reapropagate (ring, propagate);
+    struct reap *reap = &ring->reap;
     REAP_PUSH (lit, ring);
   } else {
     assert (ring->values[lit] < 0);

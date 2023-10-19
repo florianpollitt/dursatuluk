@@ -30,8 +30,8 @@ void clear_elevated_from_trail (struct ring *ring);
     RES <<= 32; \
     RES |= POS; \
     LOG ("push %s on reap with level %d and pos %ld = key %" PRId64, LOGLIT (lit), LIT_LEVEL, POS, RES); \
-    assert (reap_size (&ring->reap) < ring->size); \
-    reap_push (&RING->reap, RES); \
+    assert (reap_size (reap) < ring->size); \
+    reap_push (reap, RES); \
   } while (0)
 
 #endif

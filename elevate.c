@@ -99,9 +99,9 @@ static unsigned elevate (struct ring *ring, unsigned lit, struct watch *reason,
   *(trail->begin + old_pos) = INVALID_LIT;
   
   size_t pos = SIZE (*trail);
-  assert (pos < ring->size + ring->elevated_on_trail);
+  assert (pos <= ring->size + ring->elevated_on_trail);
   trail->pos[idx] = pos;
-  assert (trail->end < trail->begin + ring->size + ring->elevated_on_trail);
+  assert (trail->end <= trail->begin + ring->size + ring->elevated_on_trail);
   *trail->end++ = lit;
 
   ring->elevated_on_trail++;
