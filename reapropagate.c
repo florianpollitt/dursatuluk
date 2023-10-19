@@ -26,6 +26,7 @@ void clear_elevated_from_trail (struct ring *ring) {
   }
   trail->end = q;
   ring->elevated_on_trail = 0;
+  ring->statistics.trail_clears++;
   assert (SIZE (*trail) == pos);
 }
 
@@ -73,7 +74,7 @@ struct watch *ring_reapropagate (struct ring *ring, bool stop_at_conflict,
   uint64_t *visits = ring->statistics.contexts[ring->context].visits;
 #endif
   signed char *values = ring->values;
-  uint64_t ticks = 0, propagations = 0;
+  uint64_t ticks = 0, propagations = 0, elevations = 0;
   while (!reap_empty (reap)) {
     uint64_t reap_element = reap_pop (reap);
     unsigned pos = (unsigned) reap_element;  // is this cast always correct?
@@ -137,6 +138,7 @@ struct watch *ring_reapropagate (struct ring *ring, bool stop_at_conflict,
           // maybe elevate
           struct watch *reason = tag_binary (false, other, not_lit);
           (void) maybe_elevate_with_reason (ring, other, reason);
+          elevations++;
           ticks++;  // not sure exactly but probably need to increase ticks.
         }
       }
@@ -228,6 +230,7 @@ struct watch *ring_reapropagate (struct ring *ring, bool stop_at_conflict,
           // elevate
           struct watch *reason = tag_binary (true, blocking, not_lit);
           elevate_with_reason (ring, blocking, reason);
+          elevations++;
           ticks++;  // not sure exactly but probably need to increase ticks.
         }
       } else {
@@ -412,6 +415,7 @@ struct watch *ring_reapropagate (struct ring *ring, bool stop_at_conflict,
         } else if (second_replacement_value > 0) {
           // only one literal positive, elevate
           replacement = maybe_elevate_with_reason (ring, second_replacement, watch);
+          elevations++;
           assert (replacement != INVALID_LIT || !(ring->variables + IDX (second_replacement))->level);
           if (second_replacement != other) {
             assert (other_value < 0);
@@ -508,6 +512,7 @@ struct watch *ring_reapropagate (struct ring *ring, bool stop_at_conflict,
 #endif
   
   context->propagations += propagations;
+  context->elevations += elevations;
   context->ticks += ticks;
 
   LOG ("clear reap after propagation");

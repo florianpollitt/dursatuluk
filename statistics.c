@@ -17,6 +17,7 @@ void print_ring_statistics (struct ring *ring) {
   uint64_t chronological = c->chronological;
   uint64_t decisions = c->decisions;
   uint64_t propagations = c->propagations;
+  uint64_t elevations = c->elevations;
   uint64_t jumped = c->jumped;
 #ifdef METRICS
   uint64_t visits = 0;
@@ -64,6 +65,9 @@ void print_ring_statistics (struct ring *ring) {
     PRINTLN ("%-22s %17" PRIu64 " %13.2f %% fixed",
              "  imported-units:", s->imported.units,
              percent (s->imported.units, s->fixed));
+    PRINTLN ("%-22s %17" PRIu64 " %13.2f %% imported",
+             "  elevated-units:", s->elevated_units,
+             percent (s->elevated_units, s->imported.units));
     PRINTLN ("%-22s %17" PRIu64 " %13.2f %% fixed",
              "  exported-units:", s->exported.units,
              percent (s->exported.units, s->fixed));
@@ -201,6 +205,10 @@ void print_ring_statistics (struct ring *ring) {
 
   PRINTLN ("%-22s %17" PRIu64 " %13.2f %% propagations", "jumped:", jumped,
            percent (jumped, propagations));
+  PRINTLN ("%-22s %17" PRIu64 " %13.2f %% per propagations", "elevations:", elevations,
+           percent (elevations, propagations));
+  PRINTLN ("%-22s %17" PRIu64 " %13.2f %% elevations", "trail clears:", s->trail_clears,
+           percent (s->trail_clears, elevations));
   PRINTLN ("%-22s %17" PRIu64 " %13.2f millions per second",
            "propagations:", propagations,
            average (propagations, 1e6 * search));

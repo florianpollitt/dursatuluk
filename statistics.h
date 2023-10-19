@@ -19,6 +19,7 @@ struct context {
   uint64_t ticks;
   uint64_t jumped;
   uint64_t propagations;
+  uint64_t elevations;
   uint64_t conflicts;
   uint64_t chronological;
   uint64_t decisions;
@@ -36,6 +37,7 @@ struct ring_statistics {
   uint64_t simplifications;
   uint64_t switched;
   uint64_t walked;
+  uint64_t trail_clears;
 
 #define SEARCH_CONTEXT 0
 #define PROBING_CONTEXT 1
@@ -80,6 +82,7 @@ struct ring_statistics {
 #define SIZE_GLUE_STATISTICS 16
 
   uint64_t diverged;
+  uint64_t elevated_units;
 
   struct {
     uint64_t units;

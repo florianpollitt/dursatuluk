@@ -63,6 +63,7 @@ bool import_units (struct ring *ring) {
     } else if (value > 0) {
       assert (ring->options.reimply);
       elevate_ring_unit (ring, unit);
+      ring->statistics.elevated_units++;
     } else
       assign_ring_unit (ring, unit);
   }
