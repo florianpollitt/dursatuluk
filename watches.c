@@ -252,7 +252,6 @@ void test_watch_invariant (struct ring *ring, struct clause *ignore) {
     return;
   }
   assert (ring->options.reimply);
-  struct variable *variables = ring->variables;
   signed char *values = ring->values;
   for (unsigned idx = 0; idx != ring->size; idx++) {
     unsigned lit = LIT (idx);
@@ -263,89 +262,107 @@ void test_watch_invariant (struct ring *ring, struct clause *ignore) {
       lit_value = values[lit];
     }
     assert (lit_value < 0);
-    struct variable *v = variables + IDX (lit);
-    unsigned lit_level = v->level;
-    struct references *watches = &REFERENCES (lit);
-    unsigned *binaries = watches->binaries;
-    if (binaries) {
-      unsigned other, *p;
-      for (p = binaries; (other = *p) != INVALID; p++) {
-        assert (lit != other);
-        signed char other_value = values[other];
-        struct variable *u = variables + IDX (other);
-        unsigned other_level = u->level;
-        // watch invariant for binaries
-        assert (other_value > 0 && other_level <= lit_level);
-      }
+    test_watch_invariant_for_lit (ring, lit, ignore);
+  }
+}
+
+void test_watch_invariant_for_lit (struct ring *ring, unsigned lit, struct clause *ignore) {
+  LOG ("testing watch invariants for %s", LOGLIT (lit));
+  if (ring->context == WALK_CONTEXT) {
+    LOG ("not testing because of warmup");
+    return;
+  }
+  if (ignore) {
+    LOG ("not testing because of vivification");
+    return;
+  }
+  assert (ring->options.reimply);
+  struct variable *variables = ring->variables;
+  signed char *values = ring->values;
+  signed char lit_value = values[lit];
+  assert (lit_value < 0);
+  struct variable *v = variables + IDX (lit);
+  unsigned lit_level = v->level;
+  struct references *watches = &REFERENCES (lit);
+  unsigned *binaries = watches->binaries;
+  if (binaries) {
+    unsigned other, *p;
+    for (p = binaries; (other = *p) != INVALID; p++) {
+      assert (lit != other);
+      signed char other_value = values[other];
+      struct variable *u = variables + IDX (other);
+      unsigned other_level = u->level;
+      // watch invariant for binaries
+      assert (other_value > 0 && other_level <= lit_level);
     }
-    struct watch **begin = watches->begin, **q = begin;
-    struct watch **end = watches->end, **p = begin;
-    while (p != end) {
-      struct watch *watch = *q++ = *p++;
-      if (is_binary_pointer (watch)) {
-        unsigned other = other_pointer (watch);
-        assert (lit != other);
-        signed char other_value = values[other];
-        struct variable *u = variables + IDX (other);
-        unsigned other_level = u->level;
-        // watch invariant for binaries
-        assert (other_value > 0 && other_level <= lit_level);
-      } else {
-        unsigned idx = index_pointer (watch);
-        struct watcher *watcher = index_to_watcher (ring, idx);
-        if (watcher->garbage)
-          continue;
-        struct clause *clause = watcher->clause;
-        LOGCLAUSE (clause, "testing watches of");
-        unsigned other = watcher->sum ^ lit;
-        assert (other != lit);
-        signed char other_value = values[other];
-        struct variable *u = variables + IDX (other);
-        unsigned other_level = u->level;
-        // same as watch invariant for binaries
-        if (other_value > 0 && other_level <= lit_level) continue;
-        // now we need to find a 'witness' for this clause which
-        // is assigned positively at or below lit_level.
-        unsigned watcher_size = watcher->size;
-        if (watcher_size) {
-          unsigned *literals = watcher->aux;
-          unsigned *end_literals = literals + watcher_size;
-          bool ok = false;
-          for (unsigned *r = literals; r != end_literals; r++) {
-            unsigned witness = *r;
-            if (witness != lit && witness != other) {
-              signed char witness_value = values[witness];
-              struct variable *w = variables + IDX (witness);
-              unsigned witness_level = w->level;
-              if (witness_value > 0 && witness_level <= lit_level) {
-                ok = true;
-                break;
-              }
+  }
+  struct watch **begin = watches->begin, **q = begin;
+  struct watch **end = watches->end, **p = begin;
+  while (p != end) {
+    struct watch *watch = *q++ = *p++;
+    if (is_binary_pointer (watch)) {
+      unsigned other = other_pointer (watch);
+      assert (lit != other);
+      signed char other_value = values[other];
+      struct variable *u = variables + IDX (other);
+      unsigned other_level = u->level;
+      // watch invariant for binaries
+      assert (other_value > 0 && other_level <= lit_level);
+    } else {
+      unsigned idx = index_pointer (watch);
+      struct watcher *watcher = index_to_watcher (ring, idx);
+      if (watcher->garbage)
+        continue;
+      struct clause *clause = watcher->clause;
+      LOGCLAUSE (clause, "testing watches of");
+      unsigned other = watcher->sum ^ lit;
+      assert (other != lit);
+      signed char other_value = values[other];
+      struct variable *u = variables + IDX (other);
+      unsigned other_level = u->level;
+      // same as watch invariant for binaries
+      if (other_value > 0 && other_level <= lit_level) continue;
+      // now we need to find a 'witness' for this clause which
+      // is assigned positively at or below lit_level.
+      unsigned watcher_size = watcher->size;
+      if (watcher_size) {
+        unsigned *literals = watcher->aux;
+        unsigned *end_literals = literals + watcher_size;
+        bool ok = false;
+        for (unsigned *r = literals; r != end_literals; r++) {
+          unsigned witness = *r;
+          if (witness != lit && witness != other) {
+            signed char witness_value = values[witness];
+            struct variable *w = variables + IDX (witness);
+            unsigned witness_level = w->level;
+            if (witness_value > 0 && witness_level <= lit_level) {
+              ok = true;
+              break;
             }
           }
-          // watch invariant for longer clauses
-          assert (ok);
-          continue;
-        } else {
-          unsigned *literals = clause->literals;
-          unsigned *end_literals = literals + clause->size;
-          bool ok = false;
-          for (unsigned *r = literals; r != end_literals; r++) {
-            unsigned witness = *r;
-            if (witness != lit && witness != other) {
-              signed char witness_value = values[witness];
-              struct variable *w = variables + IDX (witness);
-              unsigned witness_level = w->level;
-              if (witness_value > 0 && witness_level <= lit_level) {
-                ok = true;
-                break;
-              }
-            }
-          }
-          // watch invariant for longer clauses
-          assert (ok);
-          continue;
         }
+        // watch invariant for longer clauses
+        assert (ok);
+        continue;
+      } else {
+        unsigned *literals = clause->literals;
+        unsigned *end_literals = literals + clause->size;
+        bool ok = false;
+        for (unsigned *r = literals; r != end_literals; r++) {
+          unsigned witness = *r;
+          if (witness != lit && witness != other) {
+            signed char witness_value = values[witness];
+            struct variable *w = variables + IDX (witness);
+            unsigned witness_level = w->level;
+            if (witness_value > 0 && witness_level <= lit_level) {
+              ok = true;
+              break;
+            }
+          }
+        }
+        // watch invariant for longer clauses
+        assert (ok);
+        continue;
       }
     }
   }

@@ -13,6 +13,7 @@
 #include "sort.h"
 #include "trace.h"
 #include "utilities.h"
+#include "variable.h"
 
 static void reap_bump_reason (struct ring *ring, struct watcher *watcher) {
   if (!watcher->redundant)
@@ -92,17 +93,19 @@ static void reapalyze_reason_side_literals (struct ring *ring) {
   *count = *current;
 }
 
-static bool reap_larger_trail_position (unsigned *pos, unsigned a, unsigned b) {
+static bool reap_larger_trail_position (unsigned *pos, struct variable *vars, unsigned a, unsigned b) {
   unsigned i = IDX (a);
   unsigned j = IDX (b);
-  return pos[i] > pos[j];
+  // TODO: check correctness
+  return (vars[i].level == vars[j].level && pos[i] > pos[j]) || vars[i].level > vars[j].level;
 }
 
-#define REAP_LARGER_TRAIL_POS(A, B) reap_larger_trail_position (pos, (A), (B))
+#define REAP_LARGER_TRAIL_POS(A, B) reap_larger_trail_position (pos, vars, (A), (B))
 
 static void reap_sort_deduced_clause (struct ring *ring) {
   LOGTMP ("clause before sorting");
   unsigned *pos = ring->trail.pos;
+  struct variable *vars = ring->variables;
   SORT_STACK (unsigned, ring->clause, REAP_LARGER_TRAIL_POS);
   LOGTMP ("clause after sorting");
 }
@@ -336,14 +339,16 @@ bool reapalyze (struct ring *ring, struct watch *reason) {
     } else {
       if (ring->options.sort_deduced)
         reap_sort_deduced_clause (ring);
-      else if (VAR (other)->level != jump) {
+      else if (VAR (other)->level != jump) {  // TODO: check correctness
         unsigned *p = literals + 2, replacement;
         while (assert (p != ring_clause->end),
                VAR (replacement = *p)->level != jump)
           p++;
         literals[1] = replacement;
+        assert (VAR (replacement)->level == jump);
         *p = other;
       }
+      assert (VAR (literals[1])->level >= jump);
       struct clause *learned_clause =
           new_large_clause (size, literals, true, glue);
       learned_clause->origin = ring->id;

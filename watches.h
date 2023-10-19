@@ -81,6 +81,7 @@ void sort_redundant_watcher_indices (struct ring *, size_t, unsigned *);
 
 #ifndef NDEBUG
 void test_watch_invariant (struct ring *ring, struct clause *ignore);
+void test_watch_invariant_for_lit (struct ring *ring, unsigned lit, struct clause *ignore);
 #endif
 
 /*------------------------------------------------------------------------*/

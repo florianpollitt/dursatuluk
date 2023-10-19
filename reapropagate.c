@@ -470,6 +470,8 @@ struct watch *ring_reapropagate (struct ring *ring, bool stop_at_conflict,
     watches->end = q;
     if (q == watches->begin)
       RELEASE (*watches);
+    if (!conflict && !reapropagate_later)
+      test_watch_invariant_for_lit (ring, not_lit, ignore);
   }
 
   struct ring_statistics *statistics = &ring->statistics;
