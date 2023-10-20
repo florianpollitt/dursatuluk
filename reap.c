@@ -25,8 +25,8 @@ void reap_init (struct reap *reap) {
   reap->min_bucket = 64;
   reap->max_bucket = 0;
   
-  // for (unsigned i = 0; i < 65; i++)
-    // INIT (reap->buckets[i]); // unnecessary?
+  for (unsigned i = 0; i < 65; i++)
+    INIT (reap->buckets[i]); // unnecessary?
 }
 
 void reap_release (struct reap *reap) {
