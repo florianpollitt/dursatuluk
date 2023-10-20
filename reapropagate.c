@@ -11,7 +11,21 @@
 void clear_elevated_from_trail (struct ring *ring) {
   if (!ring->options.reimply || !ring->elevated_on_trail) return;
   LOG ("clearing %d elevated literals from trail", ring->elevated_on_trail);
+  // first we need to save all literals on reap...
+  struct reap *reap = &ring->reap;
   struct ring_trail *trail = &ring->trail;
+  while (!reap_empty (reap)) {
+    uint64_t reap_element = reap_pop (reap);
+    unsigned pos = (unsigned) reap_element;
+    unsigned lit = trail->begin[pos];
+    if (lit == INVALID_LIT) continue;
+    assert (ring->values[lit] > 0);
+    PUSH (ring->reapropagate_later, lit);
+  }
+  assert (reap_empty (reap));
+  reap_clear (reap);  // still need to reset last_deleted
+
+  // now clear trail
   unsigned *begin = trail->begin, *p = begin;
   unsigned *end = trail->end, *q = begin;
   size_t pos = 0;
@@ -28,6 +42,9 @@ void clear_elevated_from_trail (struct ring *ring) {
   ring->statistics.trail_clears += ring->elevated_on_trail;
   ring->elevated_on_trail = 0;
   assert (SIZE (*trail) == pos);
+
+  // finally push literals to propagate back on reap
+  push_reapropagate_later (ring);
 }
 
 void push_reapropagate_later (struct ring *ring) {
@@ -81,9 +98,9 @@ struct watch *ring_reapropagate (struct ring *ring, bool stop_at_conflict,
   uint64_t ticks = 0, propagations = 0, elevations = 0;
   while (!reap_empty (reap)) {
     uint64_t reap_element = reap_pop (reap);
-    unsigned pos = (unsigned) reap_element;  // is this cast always correct?
+    unsigned pos = (unsigned) reap_element;  // right 32 bits is the trail position
     unsigned lit = trail->begin[pos];
-    if (lit == INVALID_LIT) continue;  // trail pos gets cleared for elevated literals
+    if (lit == INVALID_LIT) continue;
     struct variable *v = variables + IDX (lit);
     assert ((unsigned) (reap_element >> 32) == v->level);
     if (v->level >= saved_conflict_level) {
