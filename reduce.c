@@ -246,7 +246,11 @@ static void flush_references (struct ring *ring, bool fixed, unsigned start,
 
 void reduce (struct ring *ring) {
   START (ring, reduce);
-  clear_elevated_from_trail (ring);
+  assert (reap_empty (&ring->reap));
+  assert (EMPTY (ring->reapropagate_later));
+  clear_elevated_from_trail (ring, 0);
+  assert (reap_empty (&ring->reap));
+  assert (EMPTY (ring->reapropagate_later));
   check_clause_statistics (ring);
   check_redundant_and_tier2_offsets (ring);
   struct ring_statistics *statistics = &ring->statistics;

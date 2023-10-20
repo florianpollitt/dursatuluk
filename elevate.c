@@ -15,7 +15,7 @@ static unsigned elevate (struct ring *ring, unsigned lit, struct watch *reason,
                     unsigned assignment_level, int type) {
 
   if (ring->elevated_on_trail == ring->size)
-    clear_elevated_from_trail (ring);
+    clear_elevated_from_trail (ring, type > 0);
   
   assert (ring->elevated_on_trail < ring->size);
 

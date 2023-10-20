@@ -13,7 +13,7 @@ void init_reapropagate (struct ring *ring, unsigned *propagate);
 struct watch *ring_reapropagate (struct ring *, bool stop_at_conflict,
                                  struct clause *ignored_large_clause);
 
-void clear_elevated_from_trail (struct ring *ring);
+void clear_elevated_from_trail (struct ring *ring, bool push_reapropagate);
 
 
 #define REAP_PUSH(LIT_ARG, RING_ARG) \

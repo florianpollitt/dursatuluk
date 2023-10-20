@@ -25,6 +25,7 @@ bool import_units (struct ring *ring) {
     fatal_error ("failed to acquire unit lock");
   assert (reap_empty (&ring->reap));
   while (ring->ruler_units != ruler->units.end) {
+    assert (reap_empty (&ring->reap));
     unsigned unit = *ring->ruler_units++;
     LOG ("trying to import unit %s", LOGLIT (unit));
     signed char value = values[unit];
@@ -62,6 +63,7 @@ bool import_units (struct ring *ring) {
       break;
     } else if (value > 0) {
       assert (ring->options.reimply);
+      // this could induce a bug if it triggered clear_elevated_from_trail
       elevate_ring_unit (ring, unit);
       ring->statistics.elevated_units++;
     } else

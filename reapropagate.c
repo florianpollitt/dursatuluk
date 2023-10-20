@@ -8,12 +8,13 @@
 #include "utilities.h"
 
 
-void clear_elevated_from_trail (struct ring *ring) {
+void clear_elevated_from_trail (struct ring *ring, bool push_reapropagate) {
   if (!ring->options.reimply || !ring->elevated_on_trail) return;
   LOG ("clearing %d elevated literals from trail", ring->elevated_on_trail);
   // first we need to save all literals on reap...
   struct reap *reap = &ring->reap;
   struct ring_trail *trail = &ring->trail;
+  assert (push_reapropagate || reap_empty (reap));
   while (!reap_empty (reap)) {
     uint64_t reap_element = reap_pop (reap);
     unsigned pos = (unsigned) reap_element;
@@ -44,7 +45,8 @@ void clear_elevated_from_trail (struct ring *ring) {
   assert (SIZE (*trail) == pos);
 
   // finally push literals to propagate back on reap
-  push_reapropagate_later (ring);
+  if (push_reapropagate)
+    push_reapropagate_later (ring);
 }
 
 void push_reapropagate_later (struct ring *ring) {
