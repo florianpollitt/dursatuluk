@@ -675,7 +675,6 @@ void vivify_clauses (struct ring *ring) {
     uint64_t tried = ring->statistics.vivify.tried;
 
     struct unsigneds *decisions = &vivifier.decisions;
-    ;
 
     size_t i = 0;
     while (i != SIZE (vivifier.candidates)) {

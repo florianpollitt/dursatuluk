@@ -228,8 +228,8 @@ bool reapalyze (struct ring *ring, struct watch *reason) {
       bool redundant = redundant_pointer (reason);
       reason = tag_binary (redundant, forced_literal, other);
     }
-    // push reapropagate_later lits on reap.
-    push_reapropagate_later (ring);
+    // push reapropagate_later lits on reap. -> do this in reapropagate
+    // push_reapropagate_later (ring);
     assign_with_reason (ring, forced_literal, reason);
     return true;
   } else
@@ -320,8 +320,8 @@ bool reapalyze (struct ring *ring, struct watch *reason) {
       ring->statistics.contexts[ring->context].chronological++;
     }
   }
-  // push reapropagate_later lits on reap.
-  push_reapropagate_later (ring);
+  // push reapropagate_later lits on reap. -> do this in reapropagate
+  // push_reapropagate_later (ring);
   unsigned size = SIZE (*ring_clause);
   assert (size);
   if (size == 1) {

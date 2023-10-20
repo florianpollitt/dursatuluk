@@ -1,6 +1,7 @@
 #include "backtrack.h"
 #include "message.h"
 #include "ring.h"
+#include "reap.h"
 #include "reapropagate.h"
 
 static void unassign (struct ring *ring, unsigned lit) {
@@ -33,6 +34,7 @@ void backtrack (struct ring *ring, unsigned new_level) {
   struct ring_trail *trail = &ring->trail;
   unsigned *t = trail->end;
   assert (EMPTY (ring->outoforder));
+  assert (reap_empty (&ring->reap));
   while (t != trail->begin) {
     unsigned lit = *--t;
     assert (lit != INVALID_LIT || ring->options.reimply);

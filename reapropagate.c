@@ -33,11 +33,14 @@ void clear_elevated_from_trail (struct ring *ring) {
 void push_reapropagate_later (struct ring *ring) {
   struct reap *reap = &ring->reap;
   struct unsigneds *later = &ring->reapropagate_later;
-  assert (reap_empty (reap));
+  // assert (reap_empty (reap)); -> definitely not true
   LOG ("push up to %ld literals from reapropagate later on reap", SIZE (*later));
   for (unsigned *p = later->begin; p != later->end; ++p) {
     unsigned lit = *p;
-    assert (ring->values[lit] >= 0);  // TODO: this assertion might not be true
+    // assert (ring->values[lit] >= 0); can fail when NOT (lit) is driving
+    // in the new learned clause then it is actually on top of the trail.
+    // TODO: check if there are any other cases.
+    assert (ring->values[lit] >= 0 || ring->trail.end[-1] == NOT (lit));
     if (ring->values[lit] > 0)
       REAP_PUSH (lit, ring);
   }
@@ -64,6 +67,7 @@ struct watch *ring_reapropagate (struct ring *ring, bool stop_at_conflict,
   assert (ring->options.reimply);
   assert (!ring->inconsistent);
   assert (!ignore || !is_binary_pointer (ignore));
+  push_reapropagate_later (ring);
   struct ring_trail *trail = &ring->trail;
   struct reap *reap = &ring->reap;
   struct variable *variables = ring->variables;
@@ -121,6 +125,7 @@ struct watch *ring_reapropagate (struct ring *ring, bool stop_at_conflict,
           if (cl > v->level) {
             if (!reapropagate_later) {
               reapropagate_later = true;
+              assert (values[lit] > 0);
               PUSH (ring->reapropagate_later, lit);
             }
             if (!saved_conflict || cl < saved_conflict_level) {
@@ -199,6 +204,7 @@ struct watch *ring_reapropagate (struct ring *ring, bool stop_at_conflict,
           if (vblock->level > v->level) {
             if (!reapropagate_later) {
               reapropagate_later = true;
+              assert (values[lit] > 0);
               PUSH (ring->reapropagate_later, lit);
             }
             if (!saved_conflict || vblock->level < saved_conflict_level) {
@@ -457,6 +463,7 @@ struct watch *ring_reapropagate (struct ring *ring, bool stop_at_conflict,
           assert (other_value < 0 && second_replacement_value < 0 && replacement_value < 0);
           if (!reapropagate_later) {
             reapropagate_later = true;
+            assert (values[lit] > 0);
             PUSH (ring->reapropagate_later, lit);
           }
           if (!saved_conflict || conflict_on_level < saved_conflict_level) {

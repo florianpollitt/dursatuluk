@@ -66,6 +66,14 @@ bool import_units (struct ring *ring) {
       ring->statistics.elevated_units++;
     } else
       assign_ring_unit (ring, unit);
+    if (ring->options.reimply) {
+      // similarly as in force_to_repropagate, we might backtrack (actually
+      // even in this loop) so pushing on the reap is not correct.
+      assert (reap_size (&ring->reap) == 1);
+      reap_clear (&ring->reap);
+      assert (ring->values[unit] > 0);
+      PUSH (ring->reapropagate_later, unit);
+    }
   }
   if (pthread_mutex_unlock (&ruler->locks.units))
     fatal_error ("failed to release unit lock");
@@ -95,10 +103,11 @@ static void force_to_repropagate (struct ring *ring, unsigned lit) {
   LOG ("forcing to repropagate %s", LOGLIT (lit));
 
   if (ring->options.reimply) {
-    // TODO: init reap correctly -> propably just add lit to queue
-    // should work with reimply but not for now
-    struct reap *reap = &ring->reap;
-    REAP_PUSH (lit, ring);
+    // because of inprocessing we sometimes backtrack after this 
+    // (before propagate) so instead of pushing directly on the reap
+    // push lit on reapropagate_later
+    assert (ring->values[lit] < 0);
+    PUSH (ring->reapropagate_later, NOT (lit));
   } else {
     assert (ring->values[lit] < 0);
     unsigned idx = IDX (lit);
