@@ -3,6 +3,7 @@
 #include "message.h"
 #include "reapropagate.h"
 #include "ring.h"
+#include "ruler.h"
 #include "tagging.h"
 #include "trace.h"
 #include "utilities.h"
@@ -248,6 +249,13 @@ void test_watch_invariant (struct ring *ring, struct clause *ignore) {
   }
   if (ignore) {
     LOG ("not testing because of vivification");
+    return;
+  }
+  // this might lead to a segfault
+  // if ruler is inconsistent through simplification
+  if (!ring->variables) {
+    LOG ("not testing because ring was not initialized");
+    assert (ring->ruler->inconsistent);
     return;
   }
   assert (ring->options.reimply);
