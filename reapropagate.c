@@ -90,6 +90,7 @@ void init_reapropagate (struct ring *ring) {
 //                  is not assigned false.
 //                  -> handle: conflicting, propagating, elevating or nothing
 //                  -> reconnect one by one.
+//                  -> special case binary clauses -> don't disconnect/reconnect
 //
 struct watch *ring_reapropagate (struct ring *ring, bool stop_at_conflict,
                                 struct clause *ignore) {
