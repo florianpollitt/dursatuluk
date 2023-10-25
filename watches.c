@@ -64,7 +64,7 @@ void reconnect_watches (struct ring *ring, struct watches *saved) {
   very_verbose (ring, "reconnected %zu clauses", reconnected);
   ring->trail.propagate = ring->trail.begin;
   if (ring->options.reimply)
-    init_reapropagate (ring, ring->trail.begin);
+    init_reapropagate (ring);
 }
 
 struct watch *watch_literals_in_large_clause (struct ring *ring,

@@ -23,10 +23,10 @@ void clear_elevated_from_trail (struct ring *ring, bool push_reapropagate) {
     assert (ring->values[lit] > 0);
     PUSH (ring->reapropagate_later, lit);
   }
-  assert (reap_empty (reap));
-  reap_clear (reap);  // still need to reset last_deleted
+  assert (reap_empty (reap));  // ...but still need to reset last_deleted
+  reap_clear (reap);
 
-  // now clear trail
+  // now clean trail
   unsigned *begin = trail->begin, *p = begin;
   unsigned *end = trail->end, *q = begin;
   size_t pos = 0;
@@ -52,13 +52,11 @@ void clear_elevated_from_trail (struct ring *ring, bool push_reapropagate) {
 void push_reapropagate_later (struct ring *ring) {
   struct reap *reap = &ring->reap;
   struct unsigneds *later = &ring->reapropagate_later;
-  // assert (reap_empty (reap)); -> definitely not true
   LOG ("push up to %ld literals from reapropagate later on reap", SIZE (*later));
   for (unsigned *p = later->begin; p != later->end; ++p) {
     unsigned lit = *p;
     // assert (ring->values[lit] >= 0); can fail when NOT (lit) is driving
     // in the new learned clause then it is actually on top of the trail.
-    // TODO: check if there are any other cases.
     assert (ring->values[lit] >= 0 || ring->trail.end[-1] == NOT (lit));
     if (ring->values[lit] > 0)
       REAP_PUSH (lit, ring);
@@ -66,32 +64,44 @@ void push_reapropagate_later (struct ring *ring) {
   CLEAR (*later);
 }
 
-void init_reapropagate (struct ring *ring, unsigned *propagate) {
-  // only used after walk
+// only used after walk, repropagates the entire trail
+//
+void init_reapropagate (struct ring *ring) {
   struct ring_trail *trail = &ring->trail;
   struct reap *reap = &ring->reap;
+  unsigned *propagate = trail->begin;
+  assert (propagate == trail->propagate);
   assert (reap_empty (reap));
-  // reap_clear (reap);
   const unsigned *end = trail->end;
   for (unsigned *p = propagate; p != end; ++p) {
     int lit = *p;
     if (lit == INVALID_LIT) continue;
-    // assert (ring->values[lit] > 0); -> fails because values are fixed later
+    // value of lit will be fixed later.
     REAP_PUSH (lit, ring);
   }
 }
 
+// TODO: actually we dont want to use reapropagate in inprocessing.
+// TODO: handle repropagation and fake conflics differently.
+//       IDEA: save the watch on a stack, disconnect occurence for this literal
+//             -> need to save which literal was watched.
+//       INVARIANT: watch can be on the stack for both watched literals or for one.
+//                  if watch is on stack only once, then other watched literal
+//                  is not assigned false.
+//                  -> handle: conflicting, propagating, elevating or nothing
+//                  -> reconnect one by one.
+//
 struct watch *ring_reapropagate (struct ring *ring, bool stop_at_conflict,
                                 struct clause *ignore) {
   assert (ring->options.reimply);
   assert (!ring->inconsistent);
   assert (!ignore || !is_binary_pointer (ignore));
-  push_reapropagate_later (ring);
+  push_reapropagate_later (ring);  // also propagate all previously saved.
   struct ring_trail *trail = &ring->trail;
   struct reap *reap = &ring->reap;
   struct variable *variables = ring->variables;
   struct watch *conflict = 0;
-  struct watch *saved_conflict = 0;
+  struct watch *saved_conflict = 0;  // approximation of lowest conflict level
   unsigned saved_conflict_level = INVALID;
 #ifdef METRICS
   uint64_t *visits = ring->statistics.contexts[ring->context].visits;
@@ -104,6 +114,7 @@ struct watch *ring_reapropagate (struct ring *ring, bool stop_at_conflict,
     unsigned lit = trail->begin[pos];
     if (lit == INVALID_LIT) continue;
     struct variable *v = variables + IDX (lit);
+    // left 32 bits is the level, which is the main priority of the reap
     assert ((unsigned) (reap_element >> 32) == v->level);
     if (v->level >= saved_conflict_level) {
       assert (saved_conflict);
@@ -112,15 +123,10 @@ struct watch *ring_reapropagate (struct ring *ring, bool stop_at_conflict,
     if (stop_at_conflict && conflict)
       break;
     bool reapropagate_later = false;
-    // assert (*trail->propagate == lit);  // breaks with reimply
-    // needed for phases...?  need different solution for reimply...
-    // difference between global assignments and unpropagated literals.
-    // trail->propagate++;
 
     LOG ("reapropagating %s", LOGLIT (lit));
     propagations++;
     unsigned not_lit = NOT (lit);
-    // if (!values[not_lit]) continue; TODO: fix this bug because it breaks reap invariant
     assert (values[not_lit] < 0);
     struct references *watches = &REFERENCES (not_lit);
 
@@ -212,8 +218,6 @@ struct watch *ring_reapropagate (struct ring *ring, bool stop_at_conflict,
       unsigned blocking_idx = IDX (blocking);
       struct variable *vblock = variables + blocking_idx;
       
-      // TODO: not sure if this breaks watch invariant for reimply
-      // if blocking != other
       if (vblock->level <= v->level && blocking_value > 0)
         continue;
 
