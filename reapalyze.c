@@ -16,14 +16,7 @@
 #include "variable.h"
 
 static void reap_bump_reason (struct ring *ring, struct watcher *watcher) {
-  if (!watcher->redundant)
-    return;
-  if (watcher->glue <= TIER1_GLUE_LIMIT)
-    return;
-  if (watcher->glue <= TIER2_GLUE_LIMIT)
-    watcher->used = 2;
-  else
-    watcher->used = 1;
+  watcher->used = MAX_USED;
 }
 
 static bool reapalyze_reason_side_literal (struct ring *ring, unsigned lit) {
