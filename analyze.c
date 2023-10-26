@@ -85,6 +85,23 @@ static void analyze_reason_side_literals (struct ring *ring) {
   *count = *current;
 }
 
+static bool reap_larger_trail_position (unsigned *pos, struct variable *vars, unsigned a, unsigned b) {
+  unsigned i = IDX (a);
+  unsigned j = IDX (b);
+  // TODO: check correctness
+  return (vars[i].level == vars[j].level && pos[i] > pos[j]) || vars[i].level > vars[j].level;
+}
+
+#define REAP_LARGER_TRAIL_POS(A, B) reap_larger_trail_position (pos, vars, (A), (B))
+
+static void reap_sort_deduced_clause (struct ring *ring) {
+  LOGTMP ("clause before sorting");
+  unsigned *pos = ring->trail.pos;
+  struct variable *vars = ring->variables;
+  SORT_STACK (unsigned, ring->clause, REAP_LARGER_TRAIL_POS);
+  LOGTMP ("clause after sorting");
+}
+
 static bool larger_trail_position (unsigned *pos, unsigned a, unsigned b) {
   unsigned i = IDX (a);
   unsigned j = IDX (b);
@@ -171,7 +188,8 @@ static void update_decision_rate (struct ring *ring) {
   } while (0)
 
 bool analyze (struct ring *ring, struct watch *reason) {
-  if (ring->options.reimply) return reapalyze (ring, reason);
+  if (ring->options.reimply && ring->options.reimply_reap_analyze)
+    return reapalyze (ring, reason);
   assert (!ring->inconsistent);
   if (!ring->level) {
     set_inconsistent (ring, "conflict on root-level produces empty clause");
@@ -252,7 +270,7 @@ bool analyze (struct ring *ring, struct watch *reason) {
       uip = *--t;
       unsigned uip_idx = IDX (uip);
       v = ring->variables + uip_idx;
-    } while (!v->seen || v->level != conflict_level);
+    } while (uip == INVALID_LIT || !v->seen || v->level != conflict_level);
     if (!--open)
       break;
     reason = variables[IDX (uip)].reason;
@@ -305,9 +323,10 @@ bool analyze (struct ring *ring, struct watch *reason) {
       trace_add_binary (&ring->trace, not_uip, other);
       export_binary_clause (ring, learned);
     } else {
-      if (ring->options.sort_deduced)
-        sort_deduced_clause (ring);
-      else if (VAR (other)->level != jump) {
+      if (ring->options.sort_deduced) {
+        if (ring->options.reimply) reap_sort_deduced_clause (ring);
+        else sort_deduced_clause (ring);
+      } else if (VAR (other)->level != jump) {
         unsigned *p = literals + 2, replacement;
         while (assert (p != ring_clause->end),
                VAR (replacement = *p)->level != jump)

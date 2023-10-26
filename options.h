@@ -86,6 +86,7 @@
   OPTION (bool, random_stable_decisions, 0, 0, 1, "random focused decisions") \
   OPTION (bool, random_order, 0, 0, 1, "initial random decision order") \
   OPTION (bool, reimply, 1, 0, 1, "propagate out of order literals") \
+  OPTION (bool, reimply_reap_analyze, 1, 0, 1, "use reap for analyze") \
   OPTION (unsigned, reduce_interval, 1e3, 1, 1e5, "reduce base conflict interval") \
   OPTION (bool, rephase, 1, 0, 1, "reset saved phases regularly") \
   OPTION (unsigned, rephase_interval, 1e3, 1, INF, "base rephase conflict interval") \
